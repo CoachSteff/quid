@@ -60,8 +60,8 @@ The skill supports two modes of operation. Choose the one that works best for yo
 2. **Configure Credentials:**
    - Create `backend/.env` file:
      ```bash
-     EMIS_EMAIL=tim.dhaese.27@gmail.com
-     EMIS_PASSWORD=Glock179!!
+     EMIS_EMAIL=your_email@example.com
+     EMIS_PASSWORD=your_password_here
      ```
 
 3. **Verify Backend is Running:**
@@ -99,14 +99,14 @@ The skill supports two modes of operation. Choose the one that works best for yo
    
    **On macOS/Linux:**
    ```bash
-   export EMIS_EMAIL="tim.dhaese.27@gmail.com"
-   export EMIS_PASSWORD="Glock179!!"
+   export EMIS_EMAIL="your_email@example.com"
+   export EMIS_PASSWORD="your_password_here"
    ```
    
    **On Windows (PowerShell):**
    ```powershell
-   $env:EMIS_EMAIL="tim.dhaese.27@gmail.com"
-   $env:EMIS_PASSWORD="Glock179!!"
+   $env:EMIS_EMAIL="your_email@example.com"
+   $env:EMIS_PASSWORD="your_password_here"
    ```
    
    **Note:** These need to be set in Claude Desktop's environment. You may need to:

@@ -100,3 +100,4 @@ site/
 .dockerignore
 docker-compose.override.yml
 
+EMIS_CORE_FUNCTIONALITY_TEST_REPORT_V2.md
