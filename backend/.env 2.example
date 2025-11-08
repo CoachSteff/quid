@@ -1,9 +1,0 @@
-# EMIS Portal Credentials
-EMIS_EMAIL=tim.dhaese.27@gmail.com
-EMIS_PASSWORD=Glock179!!
-
-# API Configuration
-PORT=38153
-
-# Backend API URL (for skill script)
-BACKEND_URL=http://localhost:38153
