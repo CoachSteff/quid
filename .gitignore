@@ -1,0 +1,102 @@
+# Factory Droid artifacts and development reports
+.factory/
+
+# Cursor AI assistant (symlinks to .factory)
+.cursor/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# Data and sessions (contains auth tokens!)
+data/
+data/sessions/
+*.json
+!package.json
+!package-lock.json
+!sites/*.yaml
+!sites/*.yml
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+._*
+
+# Build artifacts
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+
+# Documentation build
+docs/_build/
+site/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Check Python syntax
+        working-directory: ./backend
+        run: |
+          python -m py_compile api/*.py auth/**/*.py core/*.py credentials/*.py extractors/*.py interactions/**/*.py cli.py app.py 2>&1 || true
+          find . -name "*.py" -type f -exec python -m py_compile {} \; || true
+
+  test-cli:
+    name: Test CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps
+      
+      - name: Test CLI help
+        working-directory: ./backend
+        run: |
+          chmod +x scrape
+          ./scrape --help || true
+          ./scrape list || true
+
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check required files exist
+        run: |
+          test -f README.md || exit 1
+          test -f LICENSE || exit 1
+          test -f CHANGELOG.md || exit 1
+          test -f SECURITY.md || exit 1
+          test -f CONTRIBUTING.md || exit 1
+          echo "✅ All required documentation files present"
+

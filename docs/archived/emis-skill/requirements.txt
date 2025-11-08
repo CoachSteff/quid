@@ -1,0 +1,8 @@
+requests==2.31.0
+
+# Optional dependencies for direct scraping mode (fallback when backend unavailable)
+# Install with: pip install playwright playwright-stealth
+# Then run: playwright install chromium
+# playwright>=1.40.0
+# playwright-stealth>=1.0.6
+

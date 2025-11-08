@@ -1,0 +1,74 @@
+# Example Site Configuration Template
+# Copy this file and modify for your target site
+
+site_id: example  # Unique identifier (must match filename without .yaml extension)
+name: Example Website
+description: Description of the website and what it contains
+base_url: https://example.com
+
+# Authentication configuration
+# Type options: form_based, none (for public sites), oauth, cookie_based, api_token
+auth:
+  type: form_based  # or 'none' for public sites
+  login_url: https://example.com/login
+  
+  selectors:
+    # CSS selectors for login form fields
+    email_field: 'input[name="email"]'
+    password_field: 'input[name="password"]'
+    submit_button: 'button[type="submit"]'
+  
+  # How to detect successful login
+  success_indicators:
+    - type: url_change
+      pattern: "!login"  # Pattern with '!' prefix means NOT containing
+    - type: element_present
+      selector: '.user-menu'  # Element that appears when logged in
+  
+  # How to detect login failure
+  failure_indicators:
+    - type: element_present
+      selector: '.error-message'
+      extract_error: true  # Extract error text from element
+
+# Session storage
+session:
+  ttl_seconds: 3600  # How long session is valid
+
+# Search/navigation configuration
+search:
+  url: https://example.com/search
+  method: GET  # or POST
+  selectors:
+    search_input: 'input[name="q"]'
+    search_button: 'button[type="submit"]'
+
+# Data extraction strategies
+# Multiple strategies can be defined - first matching strategy is used
+extraction:
+  strategies:
+    # Strategy 1: Extract tables
+    - type: table
+      selector: 'table.results'  # Optional: specific table selector
+      extract_headers: true
+      max_rows: 100
+    
+    # Strategy 2: Extract structured content
+    - type: content
+      selector: 'main.content'
+      fields:
+        title: 'h1'
+        description: '.description'
+        items: '.result-item'  # Extracts multiple items
+      max_length: 5000
+    
+    # Strategy 3: Extract plain text
+    - type: content
+      selector: 'article'
+      max_length: 5000
+
+# Browser behavior
+browser:
+  headless: true
+  slow_mo: 500  # Milliseconds between actions
+  timeout: 15000  # Page load timeout

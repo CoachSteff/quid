@@ -1,0 +1,374 @@
+#!/bin/bash
+# EMIS Setup Script
+# Double-click this file to set up the EMIS backend
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/backend"
+
+clear
+
+cat << 'EOF'
+╔════════════════════════════════════════════════════════════╗
+║                                                            ║
+║                 EMIS Backend Setup                         ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
+
+EOF
+
+echo "This will set up the EMIS backend on your computer."
+echo ""
+echo "Steps:"
+echo "  1. Create Python virtual environment"
+echo "  2. Install required packages"
+echo "  3. Install Playwright browser"
+echo "  4. Create .env configuration file"
+echo ""
+read -p "Press Enter to continue or Ctrl+C to cancel..."
+
+# Step 1: Check Python version
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Step 1: Checking Python version"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python 3 not found!"
+    echo ""
+    echo "Please install Python 3.9 or higher:"
+    echo "  https://www.python.org/downloads/"
+    echo ""
+    read -p "Press Enter to exit..."
+    exit 1
+fi
+
+PYTHON_VERSION=$(python3 --version)
+echo "Found: $PYTHON_VERSION"
+echo "✅ Python check passed"
+
+# Step 2: Create virtual environment
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Step 2: Creating virtual environment"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if [ -d "venv" ]; then
+    echo "⚠️  Virtual environment already exists"
+    read -p "Recreate it? [y/N] (default: N): " recreate
+    
+    # Default to N if empty
+    if [ -z "$recreate" ]; then
+        recreate="n"
+    fi
+    
+    if [ "$recreate" = "y" ] || [ "$recreate" = "Y" ]; then
+        echo "Removing old virtual environment..."
+        rm -rf venv
+    else
+        echo "Keeping existing virtual environment"
+    fi
+fi
+
+if [ ! -d "venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv venv
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Virtual environment created"
+    else
+        echo "❌ Failed to create virtual environment"
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+else
+    echo "✅ Using existing virtual environment"
+fi
+
+# Step 3: Install packages
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Step 3: Installing Python packages"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo "This may take a few minutes..."
+echo ""
+
+venv/bin/pip install --upgrade pip > /tmp/emis-setup.log 2>&1
+venv/bin/pip install -r requirements.txt >> /tmp/emis-setup.log 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "✅ Packages installed successfully"
+else
+    echo "❌ Failed to install packages"
+    echo ""
+    echo "Check the log: /tmp/emis-setup.log"
+    echo ""
+    read -p "Press Enter to exit..."
+    exit 1
+fi
+
+# Step 4: Install Playwright browser
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Step 4: Installing Playwright browser"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo "Installing Chromium browser..."
+venv/bin/playwright install chromium >> /tmp/emis-setup.log 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "✅ Browser installed successfully"
+else
+    echo "❌ Failed to install browser"
+    echo ""
+    echo "Check the log: /tmp/emis-setup.log"
+    echo ""
+    read -p "Press Enter to exit..."
+    exit 1
+fi
+
+# Step 5: Create .env file and collect credentials
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Step 5: Setting up configuration and credentials"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+RECONFIGURE=false
+
+if [ -f ".env" ]; then
+    echo "⚠️  Configuration file (.env) already exists"
+    read -p "Reconfigure credentials? [y/N] (default: N): " overwrite
+    
+    # Default to N if empty
+    if [ -z "$overwrite" ]; then
+        overwrite="n"
+    fi
+    
+    if [ "$overwrite" = "y" ] || [ "$overwrite" = "Y" ]; then
+        RECONFIGURE=true
+    else
+        echo "Keeping existing .env file"
+        echo "✅ Configuration preserved"
+    fi
+else
+    RECONFIGURE=true
+fi
+
+if [ "$RECONFIGURE" = true ]; then
+    echo ""
+    echo "How would you like to configure your credentials?"
+    echo ""
+    echo "  1. Enter credentials in terminal (recommended - default)"
+    echo "  2. Edit .env file manually"
+    echo ""
+    read -p "Choose option [1/2] (default: 1): " config_choice
+    
+    # Default to option 1 if empty
+    if [ -z "$config_choice" ]; then
+        config_choice="1"
+        echo "Using default: Option 1 (terminal entry)"
+    fi
+    
+    if [ "$config_choice" = "1" ]; then
+        # Option 1: Terminal input
+        echo ""
+        echo "Please provide your EMIS Portal credentials:"
+        echo ""
+        echo "Note: Your credentials will be stored securely in backend/.env"
+        echo "      (This file is never shared or committed to version control)"
+        echo ""
+        
+        # Get EMIS Portal URL
+        read -p "EMIS Portal URL [https://navigator.emis.vito.be]: " EMIS_URL
+        if [ -z "$EMIS_URL" ]; then
+            EMIS_URL="https://navigator.emis.vito.be"
+        fi
+        
+        # Get Email
+        read -p "Email address: " EMIS_EMAIL
+        while [ -z "$EMIS_EMAIL" ]; do
+            echo "⚠️  Email cannot be empty"
+            read -p "Email address: " EMIS_EMAIL
+        done
+        
+        # Get Password (hidden input)
+        echo -n "Password: "
+        read -s EMIS_PASSWORD
+        echo ""
+        while [ -z "$EMIS_PASSWORD" ]; do
+            echo "⚠️  Password cannot be empty"
+            echo -n "Password: "
+            read -s EMIS_PASSWORD
+            echo ""
+        done
+        
+        # Confirm password
+        echo -n "Confirm password: "
+        read -s EMIS_PASSWORD_CONFIRM
+        echo ""
+        
+        if [ "$EMIS_PASSWORD" != "$EMIS_PASSWORD_CONFIRM" ]; then
+            echo "❌ Passwords do not match!"
+            echo ""
+            read -p "Press Enter to exit..."
+            exit 1
+        fi
+        
+        # Create .env file
+        cat > .env << ENVEOF
+# EMIS Portal Configuration
+EMIS_URL=$EMIS_URL
+
+# EMIS Portal Credentials
+EMIS_EMAIL=$EMIS_EMAIL
+EMIS_PASSWORD=$EMIS_PASSWORD
+
+# API Configuration
+PORT=38153
+
+# Browser Configuration
+HEADLESS=true
+
+# Session Configuration
+SESSION_TTL=3600
+ENVEOF
+        
+        echo ""
+        echo "✅ Credentials saved to backend/.env"
+        echo ""
+        echo "📝 Your configuration:"
+        echo "   URL:   $EMIS_URL"
+        echo "   Email: $EMIS_EMAIL"
+        echo "   Password: ••••••••"
+        
+    elif [ "$config_choice" = "2" ]; then
+        # Option 2: Manual .env editing
+        echo ""
+        echo "Creating .env template file..."
+        
+        # Create .env template
+        cat > .env << 'ENVEOF'
+# EMIS Portal Configuration
+EMIS_URL=https://navigator.emis.vito.be
+
+# EMIS Portal Credentials
+# IMPORTANT: Replace these with your actual credentials
+EMIS_EMAIL=your_email@example.com
+EMIS_PASSWORD=your_password_here
+
+# API Configuration
+PORT=38153
+
+# Browser Configuration
+HEADLESS=true
+
+# Session Configuration
+SESSION_TTL=3600
+ENVEOF
+        
+        echo "✅ Created .env template"
+        echo ""
+        echo "Opening .env file for editing..."
+        echo ""
+        
+        # Try to open with default text editor
+        if command -v open &> /dev/null; then
+            open -e .env 2>/dev/null || open .env 2>/dev/null || true
+        fi
+        
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "⚠️  IMPORTANT: Edit the .env file now"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "File location:"
+        echo "  $SCRIPT_DIR/backend/.env"
+        echo ""
+        echo "Required changes:"
+        echo "  • EMIS_EMAIL: Replace with your EMIS email"
+        echo "  • EMIS_PASSWORD: Replace with your EMIS password"
+        echo "  • EMIS_URL: Optional (default is fine for most users)"
+        echo ""
+        echo "Example:"
+        echo "  EMIS_EMAIL=john.doe@company.com"
+        echo "  EMIS_PASSWORD=MySecurePassword123"
+        echo ""
+        read -p "Press Enter after you've saved your credentials..."
+        
+        # Verify credentials were set
+        if grep -q "your_email@example.com" .env 2>/dev/null || grep -q "your_password_here" .env 2>/dev/null; then
+            echo ""
+            echo "⚠️  Warning: It looks like you haven't updated the credentials yet."
+            echo ""
+            read -p "Continue anyway? [y/N] (default: N): " continue_anyway
+            
+            # Default to N if empty
+            if [ -z "$continue_anyway" ]; then
+                continue_anyway="n"
+            fi
+            
+            if [ "$continue_anyway" != "y" ] && [ "$continue_anyway" != "Y" ]; then
+                echo ""
+                echo "Setup cancelled. Please edit backend/.env and run setup again."
+                echo ""
+                read -p "Press Enter to exit..."
+                exit 1
+            fi
+        else
+            echo ""
+            echo "✅ Credentials appear to be configured"
+        fi
+    else
+        echo ""
+        echo "❌ Invalid option. Please run setup again."
+        echo ""
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+fi
+
+# Final summary
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Setup Complete!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🎉 EMIS Backend is ready to use!"
+echo ""
+echo "Next step: Start the backend service"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "To start the backend:"
+echo "  → Double-click: macos/start-emis-backend.command"
+echo ""
+echo "Or press Enter now to start it automatically..."
+echo ""
+read -p "Start backend now? [Y/n] (default: Y): " start_now
+
+# Default to Y if empty
+if [ -z "$start_now" ]; then
+    start_now="y"
+fi
+
+if [ "$start_now" = "y" ] || [ "$start_now" = "Y" ]; then
+    echo ""
+    echo "Starting EMIS Backend..."
+    echo ""
+    cd "$SCRIPT_DIR"
+    exec macos/start-emis-backend.command
+else
+    echo ""
+    echo "To start later:"
+    echo "  1. Double-click: macos/start-emis-backend.command"
+    echo "  2. Backend will run on: http://localhost:38153"
+    echo "  3. Ready for use in Claude Desktop!"
+    echo ""
+    read -p "Press Enter to exit..."
+fi

@@ -1,0 +1,84 @@
+# EMIS Portal Site Configuration
+site_id: emis
+name: VITO EMIS Portal
+description: Energie- en milieu-informatiesysteem (Energy and Environment Information System)
+base_url: https://emis.vito.be
+
+# UI Interactions (popups, modals, etc.)
+interactions:
+  popups:
+    enabled: true
+    auto_dismiss: true
+    wait_after_appearance: 1000
+    wait_after_dismiss: 500
+    selectors:
+      - '.vito--cookie button'
+      - 'button:has-text("Aanvaarden")'
+      - '.cookie-consent button:has-text("Accept")'
+      - '.cookie-banner button:has-text("Accept")'
+
+# Authentication configuration
+auth:
+  type: form_based
+  login_url: https://navigator.emis.vito.be/aanmelden
+  
+  # EMIS redirects to /aanmelden page for login (no modal)
+  # No login_trigger needed since we navigate directly to login page
+  
+  selectors:
+    # EMIS uses ion-input without type attribute for email (it's the first input)
+    # The actual input inside has type="text"
+    email_field: 'ion-input:not([type="password"]):first-of-type, ion-input[type="email"], input[type="email"], input[name="email"]'
+    password_field: 'ion-input[type="password"], input[type="password"], input[name="password"]'
+    submit_button: 'ion-button[type="submit"], button[type="submit"], ion-button:has-text("Inloggen")'
+  
+  # Indicators to detect successful login
+  success_indicators:
+    - type: url_change
+      pattern: "!login"  # URL should NOT contain 'login'
+    - type: element_present
+      selector: '.user-dashboard, .main-content'
+  
+  # Indicators to detect login failure
+  failure_indicators:
+    - type: element_present
+      selector: '.error-message, .alert-danger'
+      extract_error: true
+
+# Session configuration
+session:
+  ttl_seconds: 3600  # 1 hour
+  validation:
+    timeout_ms: 30000  # 30 seconds (increased from default 15s)
+    method: quick  # Options: quick (fast cookie check + fallback), full (always load page), cookies_only (only cookies)
+    retry_attempts: 2  # Retry validation before giving up
+
+# Search configuration
+search:
+  url: https://navigator.emis.vito.be/zoek  # Dutch search page ("/zoek" = "search")
+  method: GET
+  selectors:
+    # EMIS uses ion-input without searchbar - first ion-input is the search field
+    # The actual input inside has placeholder="Zoekterm" (Dutch for "search term")
+    search_input: 'ion-input:first-of-type, ion-input input[placeholder*="Zoek" i], input[placeholder*="Zoek" i], input[type="search"]'
+    search_button: 'ion-button[type="submit"], button[type="submit"], ion-button:has-text("Zoek")'
+
+# Data extraction strategies (tried in order)
+extraction:
+  strategies:
+    # Try table extraction first
+    - type: table
+      selector: 'table'
+      extract_headers: true
+      max_rows: 100
+    
+    # Fallback to content extraction
+    - type: content
+      selector: 'main, article, .content, #content'
+      max_length: 5000
+
+# Browser configuration
+browser:
+  headless: true  # Can be overridden by HEADLESS env var
+  slow_mo: 500    # Delay between actions in ms
+  timeout: 15000  # Page load timeout in ms

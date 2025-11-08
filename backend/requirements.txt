@@ -1,0 +1,19 @@
+# Core web framework (updated for Python 3.13 compatibility)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Browser automation (updated for Python 3.13 compatibility)
+playwright>=1.48.0
+playwright-stealth>=1.0.6
+
+# Data validation and configuration (updated for Python 3.13 compatibility)
+pydantic>=2.9.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+
+# HTTP client (for testing/integration)
+requests>=2.32.0
+
+# Ensure compatible setuptools version
+setuptools>=75.0.0
+

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  emis-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: emis-backend
+    # Load environment variables from .env file
+    # app.py will also load .env internally, providing double protection
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-38153}:${PORT:-38153}"
+    # PORT can be set via .env file or shell environment
+    # Other variables (EMIS_EMAIL, EMIS_PASSWORD) are loaded from .env via env_file
+    environment:
+      - PORT=${PORT:-38153}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, os; port = os.getenv('PORT', '38153'); urllib.request.urlopen(f'http://localhost:{port}/').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
