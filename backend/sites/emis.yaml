@@ -76,6 +76,11 @@ extraction:
     - type: content
       selector: 'main, article, .content, #content'
       max_length: 5000
+    
+    # Final fallback: raw text extraction (always succeeds)
+    - type: raw
+      selector: 'body'
+      max_length: 10000
 
 # Browser configuration
 browser:

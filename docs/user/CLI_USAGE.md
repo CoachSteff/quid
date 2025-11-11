@@ -31,7 +31,7 @@ playwright install chromium
 
 ### 1. List Sites
 
-List all configured sites:
+List all configured sites (plugins and legacy sites):
 
 ```bash
 ./scrape list
@@ -39,36 +39,63 @@ List all configured sites:
 
 **Output:**
 ```
-Available Sites (2):
+Plugins (1):
 ------------------------------------------------------------
 
-  emis
-    Name: VITO EMIS Portal
-    URL:  https://emis.vito.be
-    Info: Energie- en milieu-informatiesysteem
+  ✓ VITO EMIS Portal (emis)
+    Category: environmental
+    Version:  1.0.0
+    Info:     Energie- en milieu-informatiesysteem...
+
+Legacy Sites (1):
+------------------------------------------------------------
 
   example
     Name: Example Website
     URL:  https://example.com
 ```
 
+**Note:** The `list` command now shows both plugins (from `plugins/` directory) and legacy sites (from `backend/sites/` directory).
+
 ### 2. Show Configuration
 
-Display full configuration for a site:
+Display full configuration for a site (plugin or legacy):
 
 ```bash
 ./scrape config emis
 ```
 
-**Output:**
-```json
+**Output for Plugin:**
+```
+Plugin Configuration for 'emis':
+------------------------------------------------------------
 {
-  "site_id": "emis",
-  "name": "VITO EMIS Portal",
-  "base_url": "https://emis.vito.be",
+  "plugin": {
+    "id": "emis",
+    "name": "VITO EMIS Portal",
+    "version": "1.0.0",
+    ...
+  },
+  "auth": {
+    "scenario": "simple_form",
+    ...
+  },
+  "extraction": {
+    "strategies": [...]
+  }
+}
+```
+
+**Output for Legacy Site:**
+```
+Configuration for 'example':
+------------------------------------------------------------
+{
+  "site_id": "example",
+  "name": "Example Website",
+  "base_url": "https://example.com",
   "auth": {
     "type": "form_based",
-    "login_url": "https://navigator.emis.vito.be",
     ...
   },
   "extraction": {
@@ -81,25 +108,34 @@ Display full configuration for a site:
 - Verify site configuration is valid
 - Debug selector issues
 - Document site setup
+- Compare plugin vs legacy configurations
 
 ### 3. Check Credentials
 
-Verify credentials are configured:
+Verify credentials are configured (works for both plugins and legacy sites):
 
 ```bash
 ./scrape check emis
 ```
 
-**Output:**
+**Output for Plugin:**
 ```
-Credential Check for 'emis':
+Credential Check for 'emis' (plugin):
 ------------------------------------------------------------
-Auth Type: form_based
+Auth Type: simple_form
 Status: ✅ Credentials found
 
 Available fields:
   email: tim***@gmail.com
   password: ******
+```
+
+**Output for Legacy Site:**
+```
+Credential Check for 'example' (legacy site):
+------------------------------------------------------------
+Auth Type: form_based
+Status: ✅ Credentials found
 ```
 
 **Missing Credentials:**
@@ -109,9 +145,65 @@ Status: ❌ No credentials found
 Set credentials with environment variables:
   export EMIS_EMAIL=your_email
   export EMIS_PASSWORD=your_password
+  export EMIS_API_KEY=your_api_key  # For API key auth
 ```
 
-### 4. Query Site
+### 4. Plugin Management
+
+Quid MCP supports plugins for managing content sources. Use these commands to manage plugins:
+
+#### List Plugins
+
+```bash
+./scrape plugin list
+```
+
+**Output:**
+```
+Available Plugins (1):
+------------------------------------------------------------
+
+  ✓ Enabled - VITO EMIS Portal (emis)
+    Version:    1.0.0
+    Author:     Quid Contributors
+    Category:   environmental
+    Description: Energie- en milieu-informatiesysteem...
+    Tags:        belgium, vito, environmental, legislation
+```
+
+#### Show Plugin Information
+
+```bash
+./scrape plugin info emis
+```
+
+**Output:** Detailed JSON with plugin metadata, auth scenario, and human intervention requirements.
+
+#### Enable Plugin
+
+```bash
+./scrape plugin enable emis
+```
+
+**Output:**
+```
+✓ Plugin 'emis' enabled
+```
+
+#### Disable Plugin
+
+```bash
+./scrape plugin disable emis
+```
+
+**Output:**
+```
+○ Plugin 'emis' disabled
+```
+
+**Note:** Disabled plugins won't be available for queries until re-enabled.
+
+### 5. Query Site
 
 Execute a search query:
 
@@ -466,7 +558,7 @@ done
 ```bash
 # Compare CLI vs API results
 ./scrape query emis "test" --raw > cli_result.json
-curl -X POST http://localhost:38153/query/emis \
+curl -X POST http://localhost:91060/query/emis \
   -d '{"query":"test"}' -H 'Content-Type: application/json' > api_result.json
 diff cli_result.json api_result.json
 ```

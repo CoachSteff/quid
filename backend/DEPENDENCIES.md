@@ -347,7 +347,7 @@ When encountering dependency issues:
 ## Related Documentation
 
 - [CLI Usage Guide](../docs/user/CLI_USAGE.md) - Troubleshooting section
-- [Quick Start](../docs/user/QUICKSTART.md) - Installation guide
+- [Quick Start](../README.md#getting-started) - Installation guide
 - [Contributing](../CONTRIBUTING.md) - Development setup
 
 ## References

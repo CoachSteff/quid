@@ -1,6 +1,6 @@
 @echo off
-REM EMIS Backend Launcher for Windows
-REM Double-click this file to start the EMIS backend server
+REM Quid MCP Backend Launcher for Windows
+REM Double-click this file to start the Quid MCP backend server
 
 setlocal enabledelayedexpansion
 
@@ -12,11 +12,12 @@ cls
 
 echo ╔════════════════════════════════════════════════════════════╗
 echo ║                                                            ║
-echo ║              EMIS Backend Server Launcher                  ║
+echo ║                Quid MCP Backend Server                     ║
 echo ║                                                            ║
 echo ╚════════════════════════════════════════════════════════════╝
 echo.
-echo Starting EMIS Backend Server...
+echo Starting Quid MCP Backend Server...
+echo Port: 91060
 echo.
 
 REM Check if virtual environment exists
@@ -24,7 +25,7 @@ if not exist "venv" (
     echo ❌ Error: Virtual environment not found!
     echo.
     echo Please run setup first:
-    echo   1. Double-click: windows\setup-emis.bat
+    echo   1. Double-click: windows\setup-quid.bat
     echo.
     pause
     exit /b 1
@@ -43,7 +44,7 @@ if not exist ".env" (
         echo ⚠️  IMPORTANT: You need to add your credentials!
         echo.
         echo Please edit the file: backend\.env
-        echo And add your EMIS email and password.
+        echo And add your plugin credentials (e.g., EMIS_EMAIL, EMIS_PASSWORD).
         echo.
         pause
     ) else (
@@ -54,10 +55,10 @@ if not exist ".env" (
     )
 )
 
-REM Check if port 38153 is already in use
-netstat -ano | findstr ":38153" >nul 2>&1
+REM Check if port 91060 is already in use
+netstat -ano | findstr ":91060" >nul 2>&1
 if not errorlevel 1 (
-    echo ⚠️  Port 38153 is already in use!
+    echo ⚠️  Port 91060 is already in use!
     echo.
     echo Options:
     echo   1. Kill existing process and restart (default)
@@ -70,7 +71,7 @@ if not errorlevel 1 (
     if "!choice!"=="1" (
         echo.
         echo Killing existing process...
-        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":38153"') do (
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":91060"') do (
             taskkill /F /PID %%a >nul 2>&1
         )
         timeout /t 2 /nobreak >nul
@@ -78,7 +79,7 @@ if not errorlevel 1 (
         echo.
     ) else (
         echo.
-        echo Exiting. Backend is already running at http://localhost:38153
+        echo Exiting. Backend is already running at http://localhost:91060
         echo.
         pause
         exit /b 0
@@ -88,42 +89,42 @@ if not errorlevel 1 (
 REM Activate virtual environment and start server
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo.
-echo 🚀 Starting EMIS Backend Server...
+echo 🚀 Starting Quid MCP Backend Server...
 echo.
 timeout /t 2 /nobreak >nul
 
 call venv\Scripts\activate.bat
-start /b python app.py > %TEMP%\emis-backend.log 2>&1
+start /b python app.py > %TEMP%\quid-backend.log 2>&1
 
 REM Wait for server to start
 echo ⏳ Waiting for server to start...
 timeout /t 3 /nobreak >nul
 
 REM Check if server is responding
-curl -s http://localhost:38153/ >nul 2>&1
+curl -s http://localhost:91060/ >nul 2>&1
 if not errorlevel 1 (
     cls
     echo ╔════════════════════════════════════════════════════════════╗
     echo ║                                                            ║
-    echo ║            ✅ EMIS Backend Service Running                 ║
+    echo ║            ✅ Quid MCP Backend Service Running             ║
     echo ║                                                            ║
     echo ╚════════════════════════════════════════════════════════════╝
     echo.
     echo 🎉 SUCCESS! The backend is now running and ready to use.
     echo.
     echo 📍 Service Information:
-    echo    • URL: http://localhost:38153
+    echo    • URL: http://localhost:91060
     echo    • Status: ✅ Running
     echo    • Performance: ~8 seconds per query
     echo.
     echo 🔧 Ready for Use:
-    echo    The EMIS backend is now accessible and can be used with:
+    echo    The Quid MCP backend is now accessible and can be used with:
     echo    • MCP Server in Claude Desktop (recommended)
     echo    • Command Line Interface (CLI)
     echo    • Direct API calls
     echo.
     echo 📊 What This Service Provides:
-    echo    • Authenticated access to EMIS Portal
+    echo    • Plugin-based access to protected content sources
     echo    • Fast queries with session reuse
     echo    • 100 structured results per query
     echo    • Automatic session management
@@ -131,12 +132,12 @@ if not errorlevel 1 (
     echo ℹ️  To Stop the Service:
     echo    • Close this window, OR
     echo    • Press Ctrl+C, OR
-    echo    • Double-click: windows\stop-emis-backend.bat
+    echo    • Double-click: windows\stop-quid-backend.bat
     echo.
-    echo 📖 Logs are saved to: %TEMP%\emis-backend.log
+    echo 📖 Logs are saved to: %TEMP%\quid-backend.log
     echo.
     echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    echo Keep this window open while using the EMIS backend service.
+    echo Keep this window open while using the Quid MCP backend service.
     echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     echo.
     echo Press Ctrl+C to stop the service...
@@ -144,10 +145,10 @@ if not errorlevel 1 (
     REM Keep window open and monitor
     :loop
     timeout /t 5 /nobreak >nul
-    curl -s http://localhost:38153/ >nul 2>&1
+    curl -s http://localhost:91060/ >nul 2>&1
     if errorlevel 1 (
         echo.
-        echo 🛑 EMIS Backend service stopped.
+        echo 🛑 Quid MCP Backend service stopped.
         echo.
         pause
         exit /b 0
@@ -158,7 +159,7 @@ if not errorlevel 1 (
     echo ❌ Failed to start backend
     echo.
     echo Check the logs for details:
-    echo   type %TEMP%\emis-backend.log
+    echo   type %TEMP%\quid-backend.log
     echo.
     pause
 )

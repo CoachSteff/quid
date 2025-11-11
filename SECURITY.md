@@ -15,6 +15,7 @@ We take all security reports seriously and will respond promptly.
 | Version | Supported          |
 | ------- | ------------------ |
 | 1.x     | :white_check_mark: |
+| 2.0.0-alpha | :white_check_mark: |
 
 ## Security Best Practices
 

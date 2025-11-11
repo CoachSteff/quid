@@ -1,6 +1,6 @@
-# MCP Server Setup Guide for EMIS Backend
+# MCP Server Setup Guide for Quid Backend
 
-This guide explains how to set up the EMIS MCP server to work with Claude Desktop.
+This guide explains how to set up the Quid MCP server to work with Claude Desktop.
 
 ## Quick Setup
 
@@ -13,7 +13,7 @@ pip install -r requirements.txt
 
 ### 2. Ensure Backend is Running
 
-The MCP server requires the EMIS backend API to be running:
+The MCP server requires the Quid backend API to be running:
 
 ```bash
 cd ../backend
@@ -21,7 +21,7 @@ python app.py
 # Or use Docker: docker-compose up
 ```
 
-The backend should be accessible at `http://localhost:38153` (default).
+The backend should be accessible at `http://localhost:91060` (default).
 
 ### 3. Configure Claude Desktop
 
@@ -42,25 +42,28 @@ open ~/Library/Application\ Support/Claude/claude_desktop_config.json
 ~/.config/Claude/claude_desktop_config.json
 ```
 
-Add the EMIS MCP server configuration:
+Add the Quid MCP server configuration:
 
 ```json
 {
   "mcpServers": {
-    "emis-backend": {
-      "command": "python3",
+    "quid-backend": {
+      "command": "YOUR_PYTHON_PATH",
       "args": [
-        "/absolute/path/to/emis/mcp-server/server.py"
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153"
+        "QUID_BACKEND_URL": "http://localhost:91060"
       }
     }
   }
 }
 ```
 
-**Important:** Replace `/absolute/path/to/emis/mcp-server/server.py` with the actual absolute path to your `server.py` file.
+**Important:** 
+- Replace `YOUR_PYTHON_PATH` with your Python executable (e.g., `python3`, `python`, or full path like `/usr/bin/python3`)
+- Replace `YOUR_PROJECT_PATH` with the full absolute path to your project directory
+- **Easiest way**: Use the generate scripts (`macos/generate-mcp-config.command` or `windows\generate-mcp-config.bat`) which auto-detect these paths!
 
 ### 4. Restart Claude Desktop
 
@@ -72,7 +75,7 @@ Once configured, you can use the MCP server in Claude Desktop by asking:
 
 - "Query EMIS for recent BBT updates for water treatment"
 - "What does EMIS say about waste management legislation?"
-- "Check EMIS backend health"
+- "Check backend health"
 
 Claude will automatically use the `query_emis` tool when it detects EMIS-related queries.
 
@@ -82,12 +85,15 @@ Claude will automatically use the `query_emis` tool when it detects EMIS-related
 
 1. **Check Configuration JSON**: Ensure the JSON is valid (no trailing commas, proper quotes)
 
-2. **Check Python Path**: Verify `python3` is in your PATH, or use full path:
+2. **Check Python Path**: Verify Python is in your PATH, or use full path:
    ```json
-   "command": "/usr/bin/python3"
+   "command": "YOUR_PYTHON_PATH"
    ```
+   Find your Python path:
+   - macOS/Linux: `which python3`
+   - Windows: `where python`
 
-3. **Check File Path**: Ensure the path to `server.py` is absolute and correct
+3. **Check File Path**: Ensure the path to `server.py` is absolute and correct (replace `YOUR_PROJECT_PATH` with your actual project location)
 
 4. **Check Permissions**: Ensure `server.py` is executable:
    ```bash
@@ -98,7 +104,7 @@ Claude will automatically use the `query_emis` tool when it detects EMIS-related
 
 1. **Verify Backend is Running**:
    ```bash
-   curl http://localhost:38153/
+   curl http://localhost:91060/
    ```
 
 2. **Check Backend URL**: Ensure `EMIS_BACKEND_URL` in the config matches your backend
@@ -128,8 +134,9 @@ If you see import errors:
 
    Then use the venv Python in config:
    ```json
-   "command": "/absolute/path/to/venv/bin/python"
+   "command": "YOUR_PROJECT_PATH/venv/bin/python"
    ```
+   Replace `YOUR_PROJECT_PATH` with your actual project directory path.
 
 ## Alternative: Using MCP CLI
 
@@ -148,10 +155,10 @@ This will automatically configure Claude Desktop for you.
 
 ```bash
 # Test backend health
-curl http://localhost:38153/
+curl http://localhost:91060/
 
 # Test a query
-curl -X POST http://localhost:38153/query \
+curl -X POST http://localhost:91060/query \
   -H "Content-Type: application/json" \
   -d '{"query": "test query"}'
 ```
@@ -173,7 +180,7 @@ uv run mcp dev server.py
 
 The MCP server supports these environment variables:
 
-- `EMIS_BACKEND_URL`: Backend API URL (default: `http://localhost:38153`)
+- `QUID_BACKEND_URL`: Backend API URL (default: `http://localhost:91060`)
 - `EMIS_API_KEY`: Optional API key for backend authentication
 
 You can set these in:

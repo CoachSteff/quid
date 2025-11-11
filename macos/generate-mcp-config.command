@@ -9,12 +9,21 @@ clear
 cat << 'EOF'
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║          EMIS MCP Configuration Generator                  ║
+║          Quid MCP Configuration Generator                  ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 
-This will generate the correct MCP server configuration
+This script will generate a USER-SPECIFIC MCP configuration
 for your Claude Desktop settings.
+
+It will:
+• Auto-detect your Python installation path
+• Auto-detect your project location
+• Create a configuration file with YOUR paths
+• Copy it to your clipboard for easy pasting
+
+Note: The generated configuration is specific to YOUR computer
+      and should NOT be shared or committed to git.
 
 EOF
 
@@ -56,7 +65,7 @@ SERVER_PATH="$MCP_DIR/server.py"
 echo "✅ Found server.py: $SERVER_PATH"
 
 # Get backend URL
-BACKEND_URL="http://localhost:38153"
+BACKEND_URL="http://localhost:91060"
 echo "✅ Backend URL: $BACKEND_URL"
 
 echo ""
@@ -72,7 +81,7 @@ if [ "$USE_UVX" = true ]; then
     CONFIG=$(cat << CONFIGEOF
 {
   "mcpServers": {
-    "emis": {
+    "quid": {
       "command": "uvx",
       "args": [
         "--with", "mcp",
@@ -82,7 +91,7 @@ if [ "$USE_UVX" = true ]; then
         "$SERVER_PATH"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "$BACKEND_URL"
+        "QUID_BACKEND_URL": "$BACKEND_URL"
       }
     }
   }
@@ -96,13 +105,13 @@ else
     CONFIG=$(cat << CONFIGEOF
 {
   "mcpServers": {
-    "emis": {
+    "quid": {
       "command": "$PYTHON_PATH",
       "args": [
         "$SERVER_PATH"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "$BACKEND_URL"
+        "QUID_BACKEND_URL": "$BACKEND_URL"
       }
     }
   }
@@ -121,6 +130,10 @@ echo ""
 CONFIG_FILE="$SCRIPT_DIR/claude-mcp-config.json"
 echo "$CONFIG" > "$CONFIG_FILE"
 echo "✅ Configuration saved to: claude-mcp-config.json"
+echo ""
+echo "ℹ️  Note: This is a user-specific configuration file."
+echo "   It contains paths specific to YOUR computer."
+echo "   Do NOT commit this file to git (it's already in .gitignore)."
 
 # Copy to clipboard if available
 if command -v pbcopy &> /dev/null; then
@@ -140,7 +153,7 @@ echo "2. Add the configuration above to your config file:"
 echo "   Location: ~/Library/Application Support/Claude/claude_desktop_config.json"
 echo ""
 echo "   • If file is empty, paste the entire configuration"
-echo "   • If you have other MCP servers, add just the 'emis' section"
+echo "   • If you have other MCP servers, add just the 'quid' section"
 echo ""
 echo "3. Save the file"
 echo ""
@@ -182,7 +195,7 @@ fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Remember:"
-echo "  1. Backend must be running (macos/start-emis-backend.command)"
+echo "  1. Backend must be running (macos/start-quid-backend.command)"
 echo "  2. Restart Claude Desktop after saving config"
 echo "  3. Configuration has been copied to clipboard (paste it!)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -1,14 +1,14 @@
-# Setting Up EMIS MCP Server in Claude Desktop
+# Setting Up Quid MCP Server in Claude Desktop
 
 ## 🚀 Quick Start (Easiest Method - 5 Minutes)
 
 ### Just Follow These Steps:
 
 **1. Start the Backend**
-- **macOS**: Double-click `macos/start-emis-backend.command`
-- **Windows**: Double-click `windows\start-emis-backend.bat`
+- **macOS**: Double-click `macos/start-quid-backend.command`
+- **Windows**: Double-click `windows\start-quid-backend.bat`
 
-Wait until you see "✅ EMIS Backend Service Running"
+Wait until you see "✅ Quid MCP Backend Service Running"
 
 **2. Generate MCP Configuration**
 - **macOS**: Double-click `macos/generate-mcp-config.command`
@@ -42,7 +42,7 @@ If you prefer to configure manually instead of using the generator:
 
 ## What You Need
 
-1. ✅ Backend running (http://localhost:38153)
+1. ✅ Backend running (http://localhost:91060)
 2. ✅ MCP server files (already in `mcp-server/`)
 3. ✅ Python 3 installed (check with `which python3`)
 4. ⬜ Claude Desktop configuration (we'll do this now)
@@ -51,14 +51,14 @@ If you prefer to configure manually instead of using the generator:
 
 ## Step 1: Start the Backend
 
-First, make sure the EMIS backend is running:
+First, make sure the Quid backend is running:
 
-- **macOS**: Double-click `macos/start-emis-backend.command`
-- **Windows**: Double-click `windows\start-emis-backend.bat`
+- **macOS**: Double-click `macos/start-quid-backend.command`
+- **Windows**: Double-click `windows\start-quid-backend.bat`
 
 Wait until you see:
 ```
-✅ EMIS Backend Service Running
+✅ Quid MCP Backend Service Running
 ```
 
 ---
@@ -71,9 +71,10 @@ Wait until you see:
 - **Windows**: Double-click `windows\generate-mcp-config.bat`
 
 This script will:
-- Auto-detect your Python path (`/opt/homebrew/bin/python3` or similar)
-- Generate the correct configuration with full paths
-- Copy it to your clipboard
+- Auto-detect your Python path (finds the correct path for your system)
+- Auto-detect your project location (finds where you installed the project)
+- Generate the correct configuration with YOUR specific paths
+- Copy it to your clipboard for easy pasting
 - Optionally open the Claude config file
 
 Then just paste and save!
@@ -91,7 +92,7 @@ The config file is located at:
 ~/Library/Application Support/Claude/claude_desktop_config.json
 ```
 
-#### Add the EMIS MCP Server
+#### Add the Quid MCP Server
 
 Open the config file and add this configuration:
 
@@ -99,17 +100,17 @@ Open the config file and add this configuration:
 ```json
 {
   "mcpServers": {
-    "emis": {
+    "quid": {
       "command": "uvx",
       "args": [
         "--with", "mcp",
         "--with", "requests",
         "--with", "python-dotenv",
         "python",
-        "/Users/steffvanhaverbeke/Library/Mobile Documents/com~apple~CloudDocs/Cursor/1_projects/emis/mcp-server/server.py"
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153"
+        "QUID_BACKEND_URL": "http://localhost:91060"
       }
     }
   }
@@ -120,13 +121,13 @@ Open the config file and add this configuration:
 ```json
 {
   "mcpServers": {
-    "emis": {
-      "command": "/opt/homebrew/bin/python3",
+    "quid": {
+      "command": "YOUR_PYTHON_PATH",
       "args": [
-        "/Users/steffvanhaverbeke/Library/Mobile Documents/com~apple~CloudDocs/Cursor/1_projects/emis/mcp-server/server.py"
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153"
+        "QUID_BACKEND_URL": "http://localhost:91060"
       }
     }
   }
@@ -134,13 +135,14 @@ Open the config file and add this configuration:
 ```
 
 **Important:** 
-- Use **full path** to Python: `/opt/homebrew/bin/python3` (run `which python3` to find yours)
-- Use **full path** to `server.py` (replace with your actual project location)
-- Do NOT use just `"python"` - Claude Desktop can't find it without full path
+- Replace `YOUR_PYTHON_PATH` with your Python executable path (run `which python3` on macOS/Linux or `where python` on Windows to find it)
+- Replace `YOUR_PROJECT_PATH` with the full path to your project directory
+- Use **full absolute paths** - Claude Desktop requires absolute paths, not relative ones
+- **Easiest way**: Use the generate scripts (`macos/generate-mcp-config.command` or `windows\generate-mcp-config.bat`) which auto-detect these paths for you!
 
 ### If You Already Have Other MCP Servers
 
-If your config file already has other MCP servers, add the EMIS config to the existing `mcpServers` object:
+If your config file already has other MCP servers, add the Quid config to the existing `mcpServers` object:
 
 ```json
 {
@@ -149,13 +151,13 @@ If your config file already has other MCP servers, add the EMIS config to the ex
       "command": "...",
       "args": ["..."]
     },
-    "emis": {
-      "command": "/opt/homebrew/bin/python3",
+    "quid": {
+      "command": "YOUR_PYTHON_PATH",
       "args": [
-        "/Users/steffvanhaverbeke/Library/Mobile Documents/com~apple~CloudDocs/Cursor/1_projects/emis/mcp-server/server.py"
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153"
+        "QUID_BACKEND_URL": "http://localhost:91060"
       }
     }
   }
@@ -189,7 +191,7 @@ Claude should now have access to the `query_emis` tool and be able to query the 
 ### "I don't see any EMIS tools"
 
 **Check:**
-1. Backend is running: `curl http://localhost:38153/`
+1. Backend is running: `curl http://localhost:91060/`
 2. Config file saved correctly
 3. Claude Desktop restarted completely
 4. Path to `server.py` is correct (absolute path)
@@ -198,9 +200,9 @@ Claude should now have access to the `query_emis` tool and be able to query the 
 
 **Solution:**
 1. Start backend: 
-   - **macOS**: Double-click `macos/start-emis-backend.command`
-   - **Windows**: Double-click `windows\start-emis-backend.bat`
-2. Verify: Open http://localhost:38153 in browser
+   - **macOS**: Double-click `macos/start-quid-backend.command`
+   - **Windows**: Double-click `windows\start-quid-backend.bat`
+2. Verify: Open http://localhost:91060 in browser
 3. Should see: `{"status":"ok",...}`
 
 ### "ModuleNotFoundError: No module named 'mcp'"
@@ -265,7 +267,7 @@ If your backend is on a different port or host:
 ```json
 {
   "mcpServers": {
-    "emis": {
+    "quid": {
       "command": "python",
       "args": ["/path/to/server.py"],
       "env": {
@@ -283,11 +285,11 @@ If your backend requires an API key:
 ```json
 {
   "mcpServers": {
-    "emis": {
+    "quid": {
       "command": "python",
       "args": ["/path/to/server.py"],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153",
+        "QUID_BACKEND_URL": "http://localhost:91060",
         "EMIS_API_KEY": "your-api-key-here"
       }
     }
@@ -319,7 +321,7 @@ If your backend requires an API key:
 
 ### Test Backend
 ```bash
-curl http://localhost:38153/
+curl http://localhost:91060/
 ```
 
 ---
@@ -341,7 +343,7 @@ If it's still not working:
 
 1. **Check backend logs:**
    ```bash
-   tail -f /tmp/emis-backend.log
+   tail -f /tmp/quid-backend.log
    ```
 
 2. **Check MCP server logs:**

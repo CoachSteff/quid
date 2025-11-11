@@ -105,7 +105,7 @@ cred_manager.register_fallback('your_site', {
 ### Step 3: Query the Site
 
 ```bash
-curl -X POST http://localhost:38153/query/your_site \
+curl -X POST http://localhost:91060/query/your_site \
   -H "Content-Type: application/json" \
   -d '{"query": "search term"}'
 ```
@@ -127,7 +127,7 @@ curl http://localhost:38153/sites
 ### POST /query
 Query default site (EMIS) - backwards compatible
 ```bash
-curl -X POST http://localhost:38153/query \
+curl -X POST http://localhost:91060/query \
   -H "Content-Type: application/json" \
   -d '{"query": "BBT water treatment"}'
 ```
@@ -135,7 +135,7 @@ curl -X POST http://localhost:38153/query \
 ### POST /query/{site_id}
 Query specific site
 ```bash
-curl -X POST http://localhost:38153/query/your_site \
+curl -X POST http://localhost:91060/query/your_site \
   -H "Content-Type: application/json" \
   -d '{"query": "search term"}'
 ```
@@ -267,7 +267,6 @@ The refactored API is **100% backwards compatible**:
 - `/query` endpoint still works for EMIS
 - Environment variables work the same way
 - Fallback credentials still available
-- Existing skill scripts need no changes
 
 ## Extending the Framework
 
@@ -334,7 +333,7 @@ cd backend
 python app.py
 
 # Query in another terminal
-curl -X POST http://localhost:38153/query/emis \
+curl -X POST http://localhost:91060/query/emis \
   -H "Content-Type: application/json" \
   -d '{"query": "test query"}'
 ```
@@ -386,3 +385,4 @@ For issues or questions:
 3. Check backend logs for detailed errors
 4. Review `sites/example.yaml` for reference
 5. Test with `HEADLESS=false` to see browser
+

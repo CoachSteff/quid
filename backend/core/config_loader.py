@@ -49,6 +49,8 @@ class SiteConfigLoader:
         """
         Load site configuration by ID.
         
+        Checks plugins first, then falls back to legacy site configs.
+        
         Args:
             site_id: Site identifier (e.g., 'emis')
             
@@ -62,7 +64,21 @@ class SiteConfigLoader:
         if site_id in self._configs:
             return self._configs[site_id]
         
-        # Look for YAML file
+        # Check plugin first (for backwards compatibility)
+        try:
+            from .plugin_manager import get_plugin_manager
+            plugin_manager = get_plugin_manager()
+            plugin = plugin_manager.get_plugin(site_id)
+            if plugin and plugin.enabled:
+                # Cache plugin config
+                self._configs[site_id] = plugin.config
+                logger.info(f"Loaded site config from plugin: {site_id}")
+                return plugin.config
+        except (ImportError, FileNotFoundError, Exception) as e:
+            # Plugin not found or not available, continue to legacy config
+            logger.debug(f"Plugin '{site_id}' not found, trying legacy config: {e}")
+        
+        # Fallback to legacy YAML file
         config_file = self.config_dir / f"{site_id}.yaml"
         
         if not config_file.exists():

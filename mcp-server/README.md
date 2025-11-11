@@ -1,12 +1,12 @@
-# EMIS MCP Server
+# Quid MCP Server
 
-A Model Context Protocol (MCP) server that provides access to the VITO EMIS portal through the EMIS backend API.
+A Model Context Protocol (MCP) server that provides access to protected content sources through the Quid backend API.
 
 ## Overview
 
-This MCP server allows Claude (and other MCP-compatible AI assistants) to query the EMIS portal without using Claude Skills. Instead, it uses the standardized MCP protocol for better integration and control.
+This MCP server allows Claude (and other MCP-compatible AI assistants) to query protected content sources using the standardized MCP protocol for better integration and control.
 
-## Advantages over Claude Skills
+## Advantages
 
 - **Standardized Protocol**: Uses MCP, an open standard supported by multiple AI assistants
 - **Better Integration**: Direct integration with Claude Desktop MCP configuration
@@ -16,9 +16,9 @@ This MCP server allows Claude (and other MCP-compatible AI assistants) to query 
 
 ## Prerequisites
 
-1. **EMIS Backend Running**: The backend API must be running (see main project README)
-   - Default URL: `http://localhost:38153`
-   - Can be configured via `EMIS_BACKEND_URL` environment variable
+1. **Quid Backend Running**: The backend API must be running (see main project README)
+   - Default URL: `http://localhost:91060`
+   - Can be configured via `QUID_BACKEND_URL` environment variable
 
 2. **Python 3.8+**: Required for running the MCP server
 
@@ -44,8 +44,8 @@ uv add "mcp[cli]" requests python-dotenv
 Create a `.env` file in the `mcp-server` directory or use environment variables:
 
 ```bash
-# Backend API URL (default: http://localhost:38153)
-EMIS_BACKEND_URL=http://localhost:38153
+# Backend API URL (default: http://localhost:91060)
+QUID_BACKEND_URL=http://localhost:91060
 
 # Optional: API key if backend requires authentication
 EMIS_API_KEY=your_api_key_here
@@ -79,24 +79,32 @@ This will automatically configure Claude Desktop to use the MCP server.
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
    - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-2. Add the EMIS MCP server configuration:
+2. Add the Quid MCP server configuration:
 
 ```json
 {
   "mcpServers": {
-    "emis-backend": {
-      "command": "python",
+    "quid-backend": {
+      "command": "YOUR_PYTHON_PATH",
       "args": [
-        "/absolute/path/to/mcp-server/server.py"
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
       ],
       "env": {
-        "EMIS_BACKEND_URL": "http://localhost:38153",
+        "QUID_BACKEND_URL": "http://localhost:91060",
         "EMIS_API_KEY": "optional_api_key"
       }
     }
   }
 }
 ```
+
+**Replace placeholders:**
+- `YOUR_PYTHON_PATH`: Your Python executable (e.g., `python3`, `python`, or full path)
+- `YOUR_PROJECT_PATH`: Full absolute path to your project directory
+
+**Easiest way**: Use the generate scripts which auto-detect these paths:
+- **macOS**: `macos/generate-mcp-config.command`
+- **Windows**: `windows\generate-mcp-config.bat`
 
 3. Restart Claude Desktop
 
@@ -130,10 +138,10 @@ uv run mcp dev server.py
 
 ```bash
 # Check if backend is running
-curl http://localhost:38153/
+curl http://localhost:91060/
 
 # Test a query
-curl -X POST http://localhost:38153/query \
+curl -X POST http://localhost:91060/query \
   -H "Content-Type: application/json" \
   -d '{"query": "test query"}'
 ```
@@ -146,10 +154,10 @@ If you see "Could not connect to EMIS backend":
 
 1. **Verify backend is running**:
    ```bash
-   curl http://localhost:38153/
+   curl http://localhost:91060/
    ```
 
-2. **Check backend URL**: Ensure `EMIS_BACKEND_URL` matches your backend configuration
+2. **Check backend URL**: Ensure `QUID_BACKEND_URL` matches your backend configuration
 
 3. **Check backend logs**: Look at backend console output for errors
 
@@ -178,8 +186,8 @@ If your backend requires an API key:
 ```
 ┌─────────────┐         ┌──────────────┐         ┌──────────────┐         ┌─────────────┐
 │ Claude      │  MCP    │ MCP Server   │  HTTP   │ Backend API   │ Playwright│ EMIS Portal │
-│ Desktop     │────────▶│ (server.py) │────────▶│ (FastAPI)     │─────────▶│ (emis.vito) │
-│             │         │              │         │ Port 38153    │         │             │
+│ Desktop     │────────▶│ (server.py) │────────▶│ (FastAPI)     │─────────▶│ (Plugins)   │
+│             │         │              │         │ Port 91060    │         │             │
 └─────────────┘         └──────────────┘         └──────────────┘         └─────────────┘
 ```
 
@@ -220,20 +228,8 @@ def get_resource(id: str) -> str:
     return json.dumps({"id": id, "data": "..."})
 ```
 
-## Comparison: MCP Server vs Claude Skill
-
-| Feature | MCP Server | Claude Skill |
-|---------|-----------|--------------|
-| Protocol | Standard MCP | Claude-specific |
-| Setup | MCP config file | Skills directory |
-| Portability | Works with any MCP client | Claude-only |
-| Debugging | Standard stdio | Skill-specific |
-| Version Control | Standard Python | ZIP package |
-| Updates | Restart Claude Desktop | Reinstall skill |
-
 ## Next Steps
 
 - See main project `README.md` for backend setup
-- See `QUICKSTART.md` for quick setup guide
-- See `docs/archived/emis-skill-specification.md` for historical Claude Skill architecture (deprecated)
+- See `docs/user/MCP_CLAUDE_DESKTOP_SETUP.md` for quick setup guide
 

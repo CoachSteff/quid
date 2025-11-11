@@ -75,13 +75,29 @@ class GenericScraper:
         self.site_id = site_id
         self.trace_id = trace_id or f"trace_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
         
-        # Load site configuration
-        config_loader = get_config_loader()
+        # Try plugin first, then fallback to legacy config_loader
+        self.is_plugin = False
         try:
-            self.config = config_loader.load_site(site_id)
-        except ConfigurationException as e:
-            logger.error(f"[{self.trace_id}] Failed to load site config: {e}")
-            raise ScraperException(f"Site configuration error: {str(e)}")
+            from .plugin_manager import get_plugin_manager
+            plugin_manager = get_plugin_manager()
+            plugin = plugin_manager.get_plugin(site_id)
+            if plugin and plugin.enabled:
+                self.config = plugin.config
+                self.is_plugin = True
+                logger.info(f"[{self.trace_id}] Loaded plugin: {plugin.name} ({site_id})")
+            else:
+                raise FileNotFoundError(f"Plugin '{site_id}' not found or disabled")
+        except (FileNotFoundError, ImportError, Exception) as e:
+            # Fallback to legacy config_loader
+            logger.debug(f"[{self.trace_id}] Plugin not found, trying legacy config: {e}")
+            config_loader = get_config_loader()
+            try:
+                self.config = config_loader.load_site(site_id)
+                self.is_plugin = False
+                logger.info(f"[{self.trace_id}] Loaded legacy site config: {site_id}")
+            except ConfigurationException as e:
+                logger.error(f"[{self.trace_id}] Failed to load site config: {e}")
+                raise ScraperException(f"Site configuration error: {str(e)}")
         
         # Initialize components
         self.session_manager = SessionManager(site_id, config=self.config)
@@ -97,7 +113,7 @@ class GenericScraper:
         # Auth strategy (initialized when needed)
         self._auth_strategy: Optional[AuthStrategy] = None
         
-        logger.info(f"[{self.trace_id}] GenericScraper initialized for site: {site_id}")
+        logger.info(f"[{self.trace_id}] GenericScraper initialized for site: {site_id} (plugin={self.is_plugin})")
     
     async def __aenter__(self):
         """Context manager entry - initialize browser."""
@@ -110,32 +126,53 @@ class GenericScraper:
     
     def _get_auth_strategy(self) -> AuthStrategy:
         """
-        Get authentication strategy for this site.
+        Get authentication strategy for this site using AuthRegistry.
         
         Returns:
-            AuthStrategy instance
+            AuthStrategy instance or None if no auth required
             
         Raises:
-            ScraperException: If auth type not supported
+            ScraperException: If auth scenario not supported
         """
         if self._auth_strategy:
             return self._auth_strategy
         
         auth_config = self.config.get('auth', {})
-        auth_type = auth_config.get('type', 'none')
+        # Support both plugin format (scenario) and legacy format (type)
+        auth_scenario = auth_config.get('scenario') or auth_config.get('type', 'none')
         
         # Get credentials
         credentials = self.credential_manager.get_credentials(self.site_id)
         
-        # Create strategy based on type
-        if auth_type == 'none':
-            # No authentication needed
-            logger.info(f"[{self.trace_id}] Site requires no authentication")
-            return None
-        elif auth_type == 'form_based':
-            self._auth_strategy = FormBasedAuth(auth_config, credentials, self.config)
-        else:
-            raise ScraperException(f"Unsupported auth type: {auth_type}")
+        # Use AuthRegistry to get strategy class
+        try:
+            from .auth_registry import AuthRegistry
+            strategy_class = AuthRegistry.get(auth_scenario)
+            
+            if not strategy_class:
+                raise ScraperException(f"Unsupported auth scenario: {auth_scenario}")
+            
+            # Handle 'none' scenario specially
+            if auth_scenario == 'none':
+                logger.info(f"[{self.trace_id}] Site requires no authentication")
+                return None
+            
+            # Instantiate strategy
+            self._auth_strategy = strategy_class(auth_config, credentials, self.config)
+            logger.info(f"[{self.trace_id}] Using auth strategy: {auth_scenario}")
+            
+        except ImportError:
+            # Fallback to legacy hardcoded logic if AuthRegistry not available
+            logger.warning(f"[{self.trace_id}] AuthRegistry not available, using legacy auth logic")
+            auth_type = auth_config.get('type', 'none')
+            
+            if auth_type == 'none':
+                logger.info(f"[{self.trace_id}] Site requires no authentication")
+                return None
+            elif auth_type == 'form_based':
+                self._auth_strategy = FormBasedAuth(auth_config, credentials, self.config)
+            else:
+                raise ScraperException(f"Unsupported auth type: {auth_type}")
         
         return self._auth_strategy
     
@@ -508,6 +545,30 @@ class GenericScraper:
         logger.info(f"[{self.trace_id}] Extracting data with {len(strategies)} strategies")
         
         try:
+            # Wait for page to stabilize after search (important for Ionic/dynamic content)
+            try:
+                await self.page.wait_for_load_state("networkidle", timeout=10000)
+            except:
+                logger.debug(f"[{self.trace_id}] Network idle timeout - continuing anyway")
+            
+            await asyncio.sleep(2)  # Give Ionic Framework time to render
+            
+            # Debug: Log page state
+            try:
+                page_info = await self.page.evaluate("""
+                    () => {
+                        const tables = document.querySelectorAll('table').length;
+                        const content = document.querySelectorAll('main, article').length;
+                        const bodyLength = document.body.innerText.length;
+                        return {tables, content, bodyLength};
+                    }
+                """)
+                logger.debug(f"[{self.trace_id}] Page structure: tables={page_info['tables']}, content={page_info['content']}, text_length={page_info['bodyLength']}")
+                logger.debug(f"[{self.trace_id}] Page URL: {self.page.url}")
+                logger.debug(f"[{self.trace_id}] Page title: {await self.page.title()}")
+            except Exception as e:
+                logger.debug(f"[{self.trace_id}] Failed to get page info: {e}")
+            
             # Try each strategy until one works
             extractor = await self.extractor_registry.select_extractor(self.page, strategies)
             
@@ -516,7 +577,19 @@ class GenericScraper:
             
             logger.info(f"[{self.trace_id}] Extracted {len(raw_data)} records")
             
-            return {
+            # Also try to extract document links (non-blocking)
+            documents = []
+            try:
+                doc_extractor_config = {'type': 'documents', 'base_url': self.config.get('base_url')}
+                doc_extractor = self.extractor_registry.get_extractor('documents', doc_extractor_config)
+                
+                if await doc_extractor.can_extract(self.page):
+                    documents = await doc_extractor.extract(self.page)
+                    logger.info(f"[{self.trace_id}] Extracted {len(documents)} document links")
+            except Exception as e:
+                logger.debug(f"[{self.trace_id}] Document link extraction skipped: {e}")
+            
+            result = {
                 'raw_data': raw_data,
                 'citation': {
                     'source_name': self.config.get('name'),
@@ -525,6 +598,13 @@ class GenericScraper:
                 },
                 'summary': f"Retrieved {len(raw_data)} results from {self.config.get('name')} for query: {query}"
             }
+            
+            # Add documents if any were found
+            if documents:
+                result['documents'] = documents
+                result['summary'] += f" with {len(documents)} document links"
+            
+            return result
             
         except Exception as e:
             logger.error(f"[{self.trace_id}] Data extraction failed: {e}")

@@ -1,4 +1,4 @@
-# How to Start the EMIS Backend
+# How to Start the Quid Backend
 
 ## ⚠️ Important: Use Virtual Environment
 
@@ -19,7 +19,7 @@ cd backend
 **What it does:**
 - Automatically activates virtual environment
 - Loads `.env` file via app.py
-- Starts server on port 38153
+- Starts server on port 91060
 
 ---
 
@@ -86,7 +86,7 @@ python backend/app.py  # ❌ Can't find modules
 
 ### Check Health
 ```bash
-curl http://localhost:38153/
+curl http://localhost:91060/
 ```
 
 **Expected:**
@@ -100,7 +100,7 @@ curl http://localhost:38153/
 
 ### List Available Sites
 ```bash
-curl http://localhost:38153/sites
+curl http://localhost:91060/sites
 ```
 
 **Expected:**
@@ -118,7 +118,7 @@ curl http://localhost:38153/sites
 
 ### Test Query
 ```bash
-curl -X POST http://localhost:38153/query/emis \
+curl -X POST http://localhost:91060/query/emis \
   -H "Content-Type: application/json" \
   -d '{"query": "water treatment"}'
 ```
@@ -163,7 +163,7 @@ cat scrape | head -1
 ---
 
 ### Error: Address already in use
-**Cause:** Backend is already running on port 38153
+**Cause:** Backend is already running on port 91060
 
 **Fix:** Kill existing process
 ```bash
@@ -186,7 +186,7 @@ kill <PID>
 
 **Check if running:**
 ```bash
-curl http://localhost:38153/
+curl http://localhost:91060/
 # or
 ps aux | grep app.py
 ```
@@ -230,7 +230,7 @@ cd backend
 ./start.sh
 
 # In another terminal - test it works
-curl http://localhost:38153/
+curl http://localhost:91060/
 
 # Run a test query
 source venv/bin/activate
@@ -285,7 +285,7 @@ EMIS_PASSWORD=your_password
 
 ## 📊 Performance Expectations
 
-- **Port:** 38153 (not 8000!)
+- **Port:** 91060 (not 8000!)
 - **First query:** ~28s (authentication)
 - **Subsequent:** ~8s (session reuse)
 - **Results:** 100 records per query
@@ -310,6 +310,6 @@ source venv/bin/activate && python app.py
 python app.py
 ```
 
-**Default port: 38153** (configured in app.py)
+**Default port: 91060** (configured in app.py)
 
-**Check it works:** `curl http://localhost:38153/`
+**Check it works:** `curl http://localhost:91060/`

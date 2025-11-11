@@ -11,12 +11,21 @@ cls
 
 echo ╔════════════════════════════════════════════════════════════╗
 echo ║                                                            ║
-echo ║          EMIS MCP Configuration Generator                  ║
+echo ║          Quid MCP Configuration Generator                  ║
 echo ║                                                            ║
 echo ╚════════════════════════════════════════════════════════════╝
 echo.
-echo This will generate the correct MCP server configuration
+echo This script will generate a USER-SPECIFIC MCP configuration
 echo for your Claude Desktop settings.
+echo.
+echo It will:
+echo • Auto-detect your Python installation path
+echo • Auto-detect your project location
+echo • Create a configuration file with YOUR paths
+echo • Copy it to your clipboard for easy pasting
+echo.
+echo Note: The generated configuration is specific to YOUR computer
+echo       and should NOT be shared or committed to git.
 echo.
 echo.
 echo Detecting system configuration...
@@ -58,7 +67,7 @@ set "SERVER_PATH=!SERVER_PATH:/=\!"
 echo ✅ Found server.py: !SERVER_PATH!
 
 REM Get backend URL
-set BACKEND_URL=http://localhost:38153
+set BACKEND_URL=http://localhost:91060
 echo ✅ Backend URL: !BACKEND_URL!
 
 echo.
@@ -74,7 +83,7 @@ if "!USE_UVX!"=="true" (
     (
         echo {
         echo   "mcpServers": {
-        echo     "emis": {
+        echo     "quid": {
         echo       "command": "uvx",
         echo       "args": [
         echo         "--with", "mcp",
@@ -84,7 +93,7 @@ if "!USE_UVX!"=="true" (
         echo         "!SERVER_PATH!"
         echo       ],
         echo       "env": {
-        echo         "EMIS_BACKEND_URL": "!BACKEND_URL!"
+        echo         "QUID_BACKEND_URL": "!BACKEND_URL!"
         echo       }
         echo     }
         echo   }
@@ -97,13 +106,13 @@ if "!USE_UVX!"=="true" (
     (
         echo {
         echo   "mcpServers": {
-        echo     "emis": {
+        echo     "quid": {
         echo       "command": "%PYTHON_PATH:\=/%",
         echo       "args": [
         echo         "!SERVER_PATH!"
         echo       ],
         echo       "env": {
-        echo         "EMIS_BACKEND_URL": "!BACKEND_URL!"
+        echo         "QUID_BACKEND_URL": "!BACKEND_URL!"
         echo       }
         echo     }
         echo   }
@@ -117,6 +126,10 @@ echo.
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo.
 echo ✅ Configuration saved to: claude-mcp-config.json
+echo.
+echo ℹ️  Note: This is a user-specific configuration file.
+echo    It contains paths specific to YOUR computer.
+echo    Do NOT commit this file to git (it's already in .gitignore).
 echo.
 
 REM Copy to clipboard using PowerShell
@@ -137,7 +150,7 @@ echo 2. Add the configuration above to your config file:
 echo    Location: %APPDATA%\Claude\claude_desktop_config.json
 echo.
 echo    • If file is empty, paste the entire configuration
-echo    • If you have other MCP servers, add just the 'emis' section
+echo    • If you have other MCP servers, add just the 'quid' section
 echo.
 echo 3. Save the file
 echo.
@@ -173,7 +186,7 @@ if /i "!open_config!"=="y" (
 echo.
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo Remember:
-echo   1. Backend must be running (windows\start-emis-backend.bat)
+echo   1. Backend must be running (windows\start-quid-backend.bat)
 echo   2. Restart Claude Desktop after saving config
 echo   3. Configuration has been copied to clipboard (paste it!)
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

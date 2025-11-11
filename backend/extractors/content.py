@@ -40,9 +40,12 @@ class ContentExtractor(BaseExtractor):
         selector = self.config.get('selector', 'main, article, .content, #content')
         
         try:
+            # Wait briefly for selector to appear (handles dynamic content)
+            await page.wait_for_selector(selector, timeout=3000)
             element = await page.query_selector(selector)
             return element is not None
         except:
+            # Timeout or not found
             return False
     
     async def extract(self, page: Page) -> List[Dict[str, Any]]:

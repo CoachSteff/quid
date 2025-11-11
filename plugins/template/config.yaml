@@ -1,0 +1,117 @@
+# Plugin Template for Quid MCP
+# Copy this template to create a new plugin
+
+plugin:
+  id: my_plugin  # Unique identifier (lowercase, alphanumeric, underscores)
+  name: My Website Plugin  # Human-readable name
+  version: 1.0.0  # Semantic versioning
+  author: Your Name  # Plugin author
+  description: Brief description of what this plugin provides access to
+  homepage: https://example.com  # Website URL
+  category: medical  # medical|legal|research|environmental|business|technical|other
+  tags: [tag1, tag2, tag3]  # Keywords for discovery
+  license: CC-BY-SA-4.0  # License for the scraped content (if known)
+
+# Legacy compatibility (optional, for backwards compatibility)
+site_id: my_plugin
+name: My Website Plugin
+description: Brief description
+base_url: https://example.com
+
+# Rate limiting (respect the source!)
+rate_limit:
+  requests_per_minute: 10  # Max requests per minute
+  concurrent_sessions: 1   # Max concurrent browser sessions
+
+# Human intervention requirements
+human_intervention:
+  captcha: false  # Does this site require CAPTCHA solving?
+  mfa: false      # Does this site require 2FA/MFA?
+  initial_setup: true  # Does this require one-time credential setup?
+
+# UI Interactions (optional)
+# Handle popups, cookie consent, modals, etc.
+interactions:
+  popups:
+    enabled: true
+    auto_dismiss: true
+    wait_after_appearance: 1000
+    wait_after_dismiss: 500
+    selectors:
+      - '.cookie-consent button'
+      - 'button:has-text("Accept")'
+      - '[aria-label="Close"]'
+
+# Authentication configuration
+auth:
+  scenario: simple_form  # simple_form|api_key|oauth2|captcha|mfa|none
+  type: form_based
+  
+  # For simple_form scenario
+  login_url: https://example.com/login
+  
+  selectors:
+    email_field: 'input[name="email"], input[type="email"]'
+    password_field: 'input[name="password"], input[type="password"]'
+    submit_button: 'button[type="submit"]'
+  
+  # Success indicators (how to know login succeeded)
+  success_indicators:
+    - type: url_change
+      pattern: "!login"  # URL should NOT contain 'login'
+    - type: element_present
+      selector: '.user-dashboard, .profile'
+  
+  # Failure indicators (how to detect login failure)
+  failure_indicators:
+    - type: element_present
+      selector: '.error-message, .alert-danger'
+      extract_error: true
+
+# Session configuration
+session:
+  ttl_seconds: 3600  # Session lifetime (1 hour)
+  validation:
+    timeout_ms: 30000  # Validation timeout
+    method: quick  # quick|full|cookies_only
+    retry_attempts: 2
+
+# Search configuration
+search:
+  url: https://example.com/search
+  method: GET  # GET or POST
+  
+  selectors:
+    search_input: 'input[name="q"], input[type="search"]'
+    search_button: 'button[type="submit"]'
+
+# Data extraction strategies (tried in order until one succeeds)
+extraction:
+  strategies:
+    # Try table extraction first
+    - type: table
+      selector: 'table'
+      extract_headers: true
+      max_rows: 100
+    
+    # Then try structured content
+    - type: content
+      selector: 'main, article, .content'
+      max_length: 5000
+    
+    # PDF extraction (if applicable)
+    - type: documents
+      link_selectors:
+        - 'a[href*=".pdf"]'
+        - 'a[href*="download"]'
+    
+    # Final fallback: raw text
+    - type: raw
+      selector: 'body'
+      max_length: 10000
+
+# Browser configuration
+browser:
+  headless: true  # Run browser in headless mode
+  slow_mo: 500    # Delay between actions (ms)
+  timeout: 15000  # Page load timeout (ms)

@@ -36,9 +36,12 @@ class TableExtractor(BaseExtractor):
         selector = self.config.get('selector', 'table')
         
         try:
+            # Wait briefly for selector to appear (handles dynamic content)
+            await page.wait_for_selector(selector, timeout=3000)
             tables = await page.query_selector_all(selector)
             return len(tables) > 0
         except:
+            # Timeout or not found
             return False
     
     async def extract(self, page: Page) -> List[Dict[str, Any]]:

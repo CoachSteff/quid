@@ -19,7 +19,7 @@ import uvicorn
 # Import new generic components
 from core import GenericScraper, ScraperException, get_config_loader, ConfigurationException
 from credentials import get_credential_manager
-from api.models import QueryRequest, QueryResponse, SiteInfo, SiteListResponse
+from api.models import QueryRequest, QueryResponse, SiteInfo, SiteListResponse, PluginInfo, PluginListResponse
 
 # Configure logging first
 logging.basicConfig(
@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # 2. Docker: docker-compose sets env vars via env_file, app.py also tries to load .env
 # 3. Any scenario: Falls back to system environment variables and hardcoded defaults
 env_paths = [
+    Path(__file__).parent / "venv" / ".env",  # venv directory (preferred for credentials)
     Path(".env"),  # Current directory (for Docker if .env is copied)
     Path(__file__).parent / ".env",  # Backend directory (where app.py is)
     Path(__file__).parent.parent / "backend" / ".env",  # From project root
@@ -58,7 +59,7 @@ if not env_file_loaded:
 
 app = FastAPI(
     title="Generic Web Scraping API",
-    version="1.0.0",
+    version="2.0.0-alpha",
     description="Multi-site web scraping with configurable authentication and extraction"
 )
 
@@ -66,31 +67,29 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
-    logger.info("Generic Web Scraping API starting...")
+    logger.info("Quid MCP API starting...")
     
-    # Initialize credential manager with fallbacks for backwards compatibility
-    cred_manager = get_credential_manager()
+    # Try to load plugin manager (if available)
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        plugins = plugin_manager.get_all_plugins()
+        
+        if plugins:
+            logger.info(f"Loaded {len(plugins)} plugin(s):")
+            for plugin_id, plugin in plugins.items():
+                status = "✓" if plugin.enabled else "○"
+                logger.info(f"  {status} {plugin.name} ({plugin_id}) - {plugin.category}")
+        else:
+            logger.warning("No plugins loaded")
+    except Exception as e:
+        logger.warning(f"Plugin system not fully initialized: {e}")
     
-    # Register EMIS fallback credentials for backwards compatibility
-    # IMPORTANT: In production, use environment variables or a secrets manager!
-    # These are example values only - replace with your actual credentials
-    fallback_email = "your_email@example.com"
-    fallback_password = "your_password_here"
-    cred_manager.register_fallback('emis', {
-        'email': fallback_email,
-        'password': fallback_password
-    })
-    
-    # Log available sites
+    # Log available sites (legacy support)
     config_loader = get_config_loader()
     sites = config_loader.list_sites()
-    logger.info(f"Available sites: {', '.join(sites) if sites else 'none'}")
-    
-    # Log credential sources
-    if os.getenv("EMIS_EMAIL"):
-        logger.info("EMIS credentials loaded from environment")
-    else:
-        logger.info(f"EMIS using fallback credentials (email: {fallback_email[:10]}...)")
+    if sites:
+        logger.info(f"Legacy sites available: {', '.join(sites)}")
 
 # CORS configuration - permissive for local development
 # For local development, allow all origins (containerized environments need this)
@@ -143,17 +142,19 @@ async def root():
     return {
         "status": "ok",
         "service": "Generic Web Scraping API",
-        "version": "1.0.0"
+        "version": "2.0.0-alpha"
     }
 
 
 @app.get("/sites", response_model=SiteListResponse)
 async def list_sites():
     """
-    List all available site configurations.
+    List all available site configurations (legacy sites only).
+    
+    For plugins, use GET /plugins endpoint.
     
     Returns:
-        List of available sites with basic information
+        List of available legacy sites with basic information
     """
     try:
         config_loader = get_config_loader()
@@ -173,6 +174,123 @@ async def list_sites():
     except Exception as e:
         logger.error(f"Failed to list sites: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to list sites: {str(e)}")
+
+
+@app.get("/plugins", response_model=PluginListResponse)
+async def list_plugins():
+    """
+    List all available plugins.
+    
+    Returns:
+        List of available plugins with detailed information
+    """
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        plugins = plugin_manager.get_all_plugins()
+        
+        plugin_list = []
+        for plugin_id in plugins.keys():
+            info = plugin_manager.get_plugin_info(plugin_id)
+            if info:
+                plugin_list.append(PluginInfo(**info))
+        
+        return PluginListResponse(plugins=plugin_list, count=len(plugin_list))
+        
+    except ImportError:
+        logger.warning("Plugin system not available")
+        return PluginListResponse(plugins=[], count=0)
+    except Exception as e:
+        logger.error(f"Failed to list plugins: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list plugins: {str(e)}")
+
+
+@app.get("/plugins/{plugin_id}", response_model=PluginInfo)
+async def get_plugin(plugin_id: str):
+    """
+    Get detailed information for a specific plugin.
+    
+    Args:
+        plugin_id: Plugin identifier
+        
+    Returns:
+        Plugin information
+    """
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        info = plugin_manager.get_plugin_info(plugin_id)
+        
+        if not info:
+            raise HTTPException(status_code=404, detail=f"Plugin '{plugin_id}' not found")
+        
+        return PluginInfo(**info)
+        
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Plugin system not available")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get plugin info: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get plugin info: {str(e)}")
+
+
+@app.post("/plugins/{plugin_id}/enable")
+async def enable_plugin(plugin_id: str):
+    """
+    Enable a plugin.
+    
+    Args:
+        plugin_id: Plugin identifier
+        
+    Returns:
+        Success message
+    """
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        
+        if plugin_manager.enable_plugin(plugin_id):
+            return {"status": "success", "message": f"Plugin '{plugin_id}' enabled"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Plugin '{plugin_id}' not found")
+        
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Plugin system not available")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to enable plugin: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to enable plugin: {str(e)}")
+
+
+@app.post("/plugins/{plugin_id}/disable")
+async def disable_plugin(plugin_id: str):
+    """
+    Disable a plugin.
+    
+    Args:
+        plugin_id: Plugin identifier
+        
+    Returns:
+        Success message
+    """
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        
+        if plugin_manager.disable_plugin(plugin_id):
+            return {"status": "success", "message": f"Plugin '{plugin_id}' disabled"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Plugin '{plugin_id}' not found")
+        
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Plugin system not available")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to disable plugin: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to disable plugin: {str(e)}")
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -227,12 +345,33 @@ async def query_site(site_id: str, request: QueryRequest):
         
         logger.info(f"[{trace_id}] Query completed successfully")
         
+        # Convert documents to Document models if present
+        documents = None
+        if result.get("documents"):
+            from api.models import Document, DocumentMetadata
+            documents = []
+            for doc in result.get("documents"):
+                # Convert metadata dict to DocumentMetadata model
+                metadata = None
+                if doc.get("metadata"):
+                    metadata = DocumentMetadata(**doc.get("metadata"))
+                
+                documents.append(Document(
+                    title=doc.get("title"),
+                    url=doc.get("url"),
+                    type=doc.get("type"),
+                    metadata=metadata,
+                    description=doc.get("description"),
+                    source=doc.get("source")
+                ))
+        
         return QueryResponse(
             status="success",
             timestamp=datetime.now().isoformat() + "Z",
             citation=result.get("citation"),
             summary=result.get("summary"),
-            raw_data=result.get("raw_data")
+            raw_data=result.get("raw_data"),
+            documents=documents
         )
         
     except asyncio.TimeoutError:
@@ -268,8 +407,11 @@ async def query_site(site_id: str, request: QueryRequest):
 
 
 if __name__ == "__main__":
-    # Default port is 38153 (can be overridden via PORT env var)
-    port = int(os.getenv("PORT", "38153"))
-    logger.info(f"Starting EMIS Scraping API on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Default port is 91060 (can be overridden via PORT env var)
+    port = int(os.getenv("PORT", "91060"))
+    # Use 127.0.0.1 instead of 0.0.0.0 to avoid macOS DNS resolution issues
+    host = os.getenv("HOST", "127.0.0.1")
+    
+    logger.info(f"Starting Quid MCP API on {host}:{port}")
+    uvicorn.run(app, host=host, port=port)
 

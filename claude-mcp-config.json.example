@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "quid": {
+      "command": "python3",
+      "args": [
+        "YOUR_PROJECT_PATH/mcp-server/server.py"
+      ],
+      "env": {
+        "QUID_BACKEND_URL": "http://localhost:91060"
+      }
+    }
+  }
+}

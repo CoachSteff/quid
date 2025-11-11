@@ -93,7 +93,6 @@ extraction:
 - Fallback credentials still available
 - MCP server still functional
 
-**Note:** Claude Skill has been deprecated in favor of MCP Server. See [docs/archived/emis-skill/](../../docs/archived/emis-skill/) for historical reference.
 
 ## Benefits
 
@@ -101,7 +100,7 @@ extraction:
 - **Easy to add sites** - Just create YAML file
 - **Quick testing** - CLI with multiple output formats
 - **Better debugging** - Verbose mode, visible browser
-- **Flexible** - Multiple interfaces (CLI, API, Skill, MCP)
+- **Flexible** - Multiple interfaces (CLI, API, MCP)
 
 ### For Developers
 - **Maintainable** - Clear separation of concerns

@@ -1,0 +1,40 @@
+services:
+  quid-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quid-mcp-backend
+    ports:
+      - target: 8000
+        published: 8906
+        protocol: tcp
+    volumes:
+      # Mount plugins directory for easy updates
+      - ./plugins:/app/plugins:ro
+      # Mount sessions directory for persistent sessions
+      - ./backend/data/sessions:/app/data/sessions
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      # Load credentials from .env file
+      - EMIS_EMAIL=${EMIS_EMAIL:-}
+      - EMIS_PASSWORD=${EMIS_PASSWORD:-}
+      # Optional: Load other plugin credentials
+      # - PLUGIN_NAME_API_KEY=${PLUGIN_NAME_API_KEY:-}
+    env_file:
+      # Load from venv/.env (primary) or backend/.env (fallback)
+      - ./backend/venv/.env
+      - ./backend/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:91060/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - quid-network
+
+networks:
+  quid-network:
+    driver: bridge

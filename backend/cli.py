@@ -18,11 +18,17 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Load environment variables from .env file if it exists
 try:
     from dotenv import load_dotenv
-    env_path = Path(__file__).parent / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
+    # Try venv/.env first (preferred for credentials)
+    venv_env_path = Path(__file__).parent / 'venv' / '.env'
+    if venv_env_path.exists():
+        load_dotenv(venv_env_path)
     else:
-        load_dotenv()  # Try to find .env in parent directories
+        # Fallback to backend/.env
+        env_path = Path(__file__).parent / '.env'
+        if env_path.exists():
+            load_dotenv(env_path)
+        else:
+            load_dotenv()  # Try to find .env in parent directories
 except ImportError:
     pass  # python-dotenv not installed, environment variables must be set manually
 
@@ -53,28 +59,51 @@ def print_error(message: str):
 
 
 async def list_sites():
-    """List all available site configurations."""
+    """List all available site configurations (plugins and legacy sites)."""
     try:
+        # Show plugins first
+        try:
+            from core.plugin_manager import get_plugin_manager
+            plugin_manager = get_plugin_manager()
+            plugins = plugin_manager.get_all_plugins()
+            
+            if plugins:
+                print(f"\nPlugins ({len(plugins)}):")
+                print("-" * 60)
+                for plugin_id, plugin in plugins.items():
+                    status = "✓" if plugin.enabled else "○"
+                    print(f"\n  {status} {plugin.name} ({plugin_id})")
+                    print(f"    Category: {plugin.category}")
+                    print(f"    Version:  {plugin.version}")
+                    if plugin.description:
+                        print(f"    Info:     {plugin.description[:60]}...")
+            else:
+                print("\nNo plugins found.")
+        except ImportError:
+            print("\nPlugin system not available.")
+        except Exception as e:
+            print_error(f"Failed to load plugins: {e}")
+        
+        # Show legacy sites
         config_loader = get_config_loader()
         sites = config_loader.list_sites()
         
-        if not sites:
-            print("No sites configured. Add YAML files to backend/sites/")
-            return 0
-        
-        print(f"\nAvailable Sites ({len(sites)}):")
-        print("-" * 60)
-        
-        for site_id in sites:
-            try:
-                info = config_loader.get_site_info(site_id)
-                print(f"\n  {site_id}")
-                print(f"    Name: {info['name']}")
-                print(f"    URL:  {info['base_url']}")
-                if info.get('description'):
-                    print(f"    Info: {info['description']}")
-            except Exception as e:
-                print(f"  {site_id} - ERROR: {e}")
+        if sites:
+            print(f"\nLegacy Sites ({len(sites)}):")
+            print("-" * 60)
+            
+            for site_id in sites:
+                try:
+                    info = config_loader.get_site_info(site_id)
+                    print(f"\n  {site_id}")
+                    print(f"    Name: {info['name']}")
+                    print(f"    URL:  {info['base_url']}")
+                    if info.get('description'):
+                        print(f"    Info: {info['description']}")
+                except Exception as e:
+                    print(f"  {site_id} - ERROR: {e}")
+        elif not plugins:
+            print("\nNo sites configured. Add YAML files to backend/sites/ or plugins to plugins/")
         
         print()
         return 0
@@ -85,8 +114,22 @@ async def list_sites():
 
 
 async def show_site_config(site_id: str):
-    """Show configuration for a specific site."""
+    """Show configuration for a specific site (plugin or legacy)."""
     try:
+        # Try plugin first
+        try:
+            from core.plugin_manager import get_plugin_manager
+            plugin_manager = get_plugin_manager()
+            plugin = plugin_manager.get_plugin(site_id)
+            if plugin:
+                print(f"\nPlugin Configuration for '{site_id}':")
+                print("-" * 60)
+                print_json(plugin.config)
+                return 0
+        except (ImportError, FileNotFoundError):
+            pass
+        
+        # Fallback to legacy config
         config_loader = get_config_loader()
         config = config_loader.load_site(site_id)
         
@@ -104,15 +147,32 @@ async def show_site_config(site_id: str):
 
 
 async def check_credentials(site_id: str):
-    """Check if credentials are available for a site."""
+    """Check if credentials are available for a site (plugin or legacy)."""
     try:
-        config_loader = get_config_loader()
-        config = config_loader.load_site(site_id)
+        # Try plugin first
+        config = None
+        is_plugin = False
+        try:
+            from core.plugin_manager import get_plugin_manager
+            plugin_manager = get_plugin_manager()
+            plugin = plugin_manager.get_plugin(site_id)
+            if plugin:
+                config = plugin.config
+                is_plugin = True
+        except (ImportError, FileNotFoundError):
+            pass
+        
+        # Fallback to legacy config
+        if not config:
+            config_loader = get_config_loader()
+            config = config_loader.load_site(site_id)
         
         auth_config = config.get('auth', {})
-        auth_type = auth_config.get('type', 'none')
+        # Support both plugin format (scenario) and legacy format (type)
+        auth_type = auth_config.get('scenario') or auth_config.get('type', 'none')
         
-        print(f"\nCredential Check for '{site_id}':")
+        source = "plugin" if is_plugin else "legacy site"
+        print(f"\nCredential Check for '{site_id}' ({source}):")
         print("-" * 60)
         print(f"Auth Type: {auth_type}")
         
@@ -129,6 +189,8 @@ async def check_credentials(site_id: str):
             print(f"\nSet credentials with environment variables:")
             print(f"  export {site_id.upper()}_EMAIL=your_email")
             print(f"  export {site_id.upper()}_PASSWORD=your_password")
+            if auth_type == 'api_key':
+                print(f"  export {site_id.upper()}_API_KEY=your_api_key")
             return 1
         
         print("Status: ✅ Credentials found")
@@ -152,6 +214,108 @@ async def check_credentials(site_id: str):
         return 1
 
 
+async def list_plugins():
+    """List all available plugins."""
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        plugins = plugin_manager.get_all_plugins()
+        
+        if not plugins:
+            print("No plugins found.")
+            return 0
+        
+        print(f"\nAvailable Plugins ({len(plugins)}):")
+        print("-" * 60)
+        
+        for plugin_id, plugin in plugins.items():
+            status = "✓ Enabled" if plugin.enabled else "○ Disabled"
+            print(f"\n  {status} - {plugin.name} ({plugin_id})")
+            print(f"    Version:    {plugin.version}")
+            print(f"    Author:     {plugin.author}")
+            print(f"    Category:   {plugin.category}")
+            if plugin.description:
+                print(f"    Description: {plugin.description[:60]}...")
+            if plugin.tags:
+                print(f"    Tags:        {', '.join(plugin.tags)}")
+        
+        print()
+        return 0
+        
+    except ImportError:
+        print_error("Plugin system not available")
+        return 1
+    except Exception as e:
+        print_error(f"Failed to list plugins: {e}")
+        return 1
+
+
+async def show_plugin_info(plugin_id: str):
+    """Show detailed information for a specific plugin."""
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        info = plugin_manager.get_plugin_info(plugin_id)
+        
+        if not info:
+            print_error(f"Plugin '{plugin_id}' not found")
+            return 1
+        
+        print(f"\nPlugin Information: {info['name']}")
+        print("-" * 60)
+        print_json(info, pretty=True)
+        return 0
+        
+    except ImportError:
+        print_error("Plugin system not available")
+        return 1
+    except Exception as e:
+        print_error(f"Failed to get plugin info: {e}")
+        return 1
+
+
+async def enable_plugin(plugin_id: str):
+    """Enable a plugin."""
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        
+        if plugin_manager.enable_plugin(plugin_id):
+            print(f"✓ Plugin '{plugin_id}' enabled")
+            return 0
+        else:
+            print_error(f"Plugin '{plugin_id}' not found")
+            return 1
+        
+    except ImportError:
+        print_error("Plugin system not available")
+        return 1
+    except Exception as e:
+        print_error(f"Failed to enable plugin: {e}")
+        return 1
+
+
+async def disable_plugin(plugin_id: str):
+    """Disable a plugin."""
+    try:
+        from core.plugin_manager import get_plugin_manager
+        plugin_manager = get_plugin_manager()
+        
+        if plugin_manager.disable_plugin(plugin_id):
+            print(f"○ Plugin '{plugin_id}' disabled")
+            return 0
+        else:
+            print_error(f"Plugin '{plugin_id}' not found")
+            return 1
+        
+    except ImportError:
+        print_error("Plugin system not available")
+        return 1
+    except Exception as e:
+        print_error(f"Failed to disable plugin: {e}")
+        return 1
+
+
 async def query_site(site_id: str, query: str, output_format: str = 'summary', raw: bool = False):
     """
     Query a site and display results.
@@ -162,6 +326,11 @@ async def query_site(site_id: str, query: str, output_format: str = 'summary', r
         output_format: Output format (summary, json, table, raw)
         raw: Show raw data only
     """
+    # Validate query input
+    if not query or not query.strip():
+        print_error("Query cannot be empty")
+        return 1
+    
     try:
         print(f"Querying '{site_id}' for: {query}", file=sys.stderr)
         print("Please wait...", file=sys.stderr)
@@ -178,12 +347,17 @@ async def query_site(site_id: str, query: str, output_format: str = 'summary', r
             return 0
         
         if output_format == 'json':
-            print_json({
+            output = {
                 'status': 'success',
                 'citation': result.get('citation'),
                 'summary': result.get('summary'),
                 'results_count': len(result.get('raw_data', []))
-            }, pretty=True)
+            }
+            # Include documents if present
+            if result.get('documents'):
+                output['documents'] = result.get('documents')
+                output['documents_count'] = len(result.get('documents'))
+            print_json(output, pretty=True)
             return 0
         
         if output_format == 'table':
@@ -206,6 +380,7 @@ async def query_site(site_id: str, query: str, output_format: str = 'summary', r
         summary = result.get('summary', '')
         citation = result.get('citation', {})
         raw_data = result.get('raw_data', [])
+        documents = result.get('documents', [])
         
         print("\n" + "=" * 60)
         print("QUERY RESULTS")
@@ -221,10 +396,27 @@ async def query_site(site_id: str, query: str, output_format: str = 'summary', r
             print(f"URL: {citation.get('source_url')}")
             print(f"Retrieved: {citation.get('retrieved_on')}")
         
+        # Show source documents with downloadable links
+        if documents:
+            print(f"\n" + "=" * 60)
+            print(f"SOURCE DOCUMENTS ({len(documents)} found)")
+            print("=" * 60)
+            for idx, doc in enumerate(documents, 1):
+                print(f"\n[{idx}] {doc.get('title', 'Untitled')}")
+                print(f"    Type: {doc.get('type', 'unknown')}")
+                print(f"    URL: {doc.get('url')}")
+                if doc.get('metadata'):
+                    metadata = doc.get('metadata')
+                    if 'woId' in metadata:
+                        print(f"    Document ID: {metadata['woId']}")
+                    if 'woVersion' in metadata:
+                        print(f"    Version: {metadata['woVersion']}")
+        
         # Show first few results
         if raw_data:
-            print("\nTop Results:")
-            print("-" * 60)
+            print(f"\n" + "=" * 60)
+            print("DATA PREVIEW")
+            print("=" * 60)
             for idx, row in enumerate(raw_data[:5], 1):
                 print(f"\n[{idx}]")
                 for key, value in row.items():
@@ -233,7 +425,7 @@ async def query_site(site_id: str, query: str, output_format: str = 'summary', r
                     print(f"  {key}: {value}")
             
             if len(raw_data) > 5:
-                print(f"\n... and {len(raw_data) - 5} more results")
+                print(f"\n... and {len(raw_data) - 5} more data records")
                 print(f"Use --format=raw to see all data")
         
         print("\n" + "=" * 60)
@@ -309,6 +501,21 @@ Examples:
     query_parser.add_argument('--raw', action='store_true',
                               help='Show complete raw response (same as --format=raw)')
     
+    # Plugin command
+    plugin_parser = subparsers.add_parser('plugin', help='Plugin management')
+    plugin_subparsers = plugin_parser.add_subparsers(dest='plugin_command', help='Plugin command')
+    
+    plugin_subparsers.add_parser('list', help='List all plugins')
+    
+    plugin_info_parser = plugin_subparsers.add_parser('info', help='Show plugin details')
+    plugin_info_parser.add_argument('plugin_id', help='Plugin identifier')
+    
+    plugin_enable_parser = plugin_subparsers.add_parser('enable', help='Enable a plugin')
+    plugin_enable_parser.add_argument('plugin_id', help='Plugin identifier')
+    
+    plugin_disable_parser = plugin_subparsers.add_parser('disable', help='Disable a plugin')
+    plugin_disable_parser.add_argument('plugin_id', help='Plugin identifier')
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -337,6 +544,23 @@ Examples:
             output_format=args.format,
             raw=args.raw
         ))
+    
+    elif args.command == 'plugin':
+        if not hasattr(args, 'plugin_command') or not args.plugin_command:
+            plugin_parser.print_help()
+            return 1
+        
+        if args.plugin_command == 'list':
+            return asyncio.run(list_plugins())
+        elif args.plugin_command == 'info':
+            return asyncio.run(show_plugin_info(args.plugin_id))
+        elif args.plugin_command == 'enable':
+            return asyncio.run(enable_plugin(args.plugin_id))
+        elif args.plugin_command == 'disable':
+            return asyncio.run(disable_plugin(args.plugin_id))
+        else:
+            plugin_parser.print_help()
+            return 1
     
     else:
         parser.print_help()

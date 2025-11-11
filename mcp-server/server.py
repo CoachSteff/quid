@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MCP Server for EMIS Backend
-Provides tools for querying the VITO EMIS portal via the backend API.
+MCP Server for Quid Backend
+Provides tools for querying the VITO EMIS portal (via emis plugin) through the Quid backend API.
 """
 
 import os
@@ -22,7 +22,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Load environment variables
+# Prefer venv/.env for credentials (not committed to git)
 env_paths = [
+    Path(__file__).parent.parent / "backend" / "venv" / ".env",  # venv directory (preferred)
     Path(__file__).parent.parent / "backend" / ".env",
     Path(__file__).parent / ".env",
     Path(".env"),
@@ -37,16 +39,16 @@ else:
     load_dotenv()
 
 # Create MCP server instance
-mcp = FastMCP("EMIS Backend MCP Server")
+mcp = FastMCP("Quid Backend MCP Server")
 
 # Configuration
-BACKEND_URL = os.getenv("EMIS_BACKEND_URL", "http://localhost:38153")
-API_KEY = os.getenv("EMIS_API_KEY")  # Optional
+BACKEND_URL = os.getenv("QUID_BACKEND_URL", os.getenv("EMIS_BACKEND_URL", "http://localhost:91060"))
+API_KEY = os.getenv("QUID_API_KEY", os.getenv("EMIS_API_KEY"))  # Optional
 
 
 def call_backend_api(query: str) -> dict:
     """
-    Call the EMIS backend API to execute a query.
+    Call the Quid backend API to execute a query.
     
     Args:
         query: The search query string
@@ -79,13 +81,13 @@ def call_backend_api(query: str) -> dict:
     except requests.exceptions.Timeout:
         return {
             "status": "error",
-            "error_message": "Request timed out. The EMIS portal query took too long to complete."
+            "error_message": "Request timed out. The query took too long to complete."
         }
     except requests.exceptions.ConnectionError:
         return {
             "status": "error",
             "error_message": (
-                f"Could not connect to EMIS backend at {BACKEND_URL}. "
+                f"Could not connect to Quid backend at {BACKEND_URL}. "
                 "Please ensure the backend service is running."
             )
         }
@@ -114,7 +116,7 @@ def query_emis(query: str) -> dict:
     Query the VITO EMIS portal for environmental and energy data.
     
     This tool performs a live, authenticated query against the EMIS portal
-    and returns structured results including citations, summaries, and raw data.
+    and returns structured results including citations, summaries, raw data, and source documents.
     
     Args:
         query: Natural language query about EMIS data (e.g., "Find recent BBT updates for water treatment",
@@ -127,6 +129,11 @@ def query_emis(query: str) -> dict:
             - citation: Source information (source_name, source_url, retrieved_on)
             - summary: AI-generated summary of findings
             - raw_data: List of structured data records
+            - documents: List of source documents with:
+                * title: Document title
+                * url: Direct link to document
+                * type: Document type (detail_page, pdf, download)
+                * metadata: Document metadata (woId, version, etc.)
             - error_message: Error details (if status is "error")
     
     Example:
@@ -135,13 +142,36 @@ def query_emis(query: str) -> dict:
     logger.info(f"EMIS query received: {query}")
     result = call_backend_api(query)
     logger.info(f"EMIS query completed with status: {result.get('status')}")
+    
+    # Format documents for better Claude presentation if present
+    if result.get('documents'):
+        docs_count = len(result['documents'])
+        logger.info(f"Query returned {docs_count} source documents")
+        
+        # Add a formatted documents summary for Claude to easily reference
+        doc_summary = "\n\nSOURCE DOCUMENTS:\n"
+        for idx, doc in enumerate(result['documents'], 1):
+            doc_summary += f"\n[{idx}] {doc.get('title', 'Untitled')}\n"
+            doc_summary += f"    URL: {doc.get('url')}\n"
+            doc_summary += f"    Type: {doc.get('type', 'unknown')}\n"
+            
+            if doc.get('metadata'):
+                metadata = doc['metadata']
+                if metadata.get('woId'):
+                    doc_summary += f"    Document ID: {metadata['woId']}\n"
+                if metadata.get('woVersion'):
+                    doc_summary += f"    Version: {metadata['woVersion']}\n"
+        
+        # Add formatted summary to result for Claude to see
+        result['documents_formatted'] = doc_summary
+    
     return result
 
 
 @mcp.tool()
 def check_backend_health() -> dict:
     """
-    Check if the EMIS backend service is running and accessible.
+    Check if the Quid backend service is running and accessible.
     
     Returns:
         dict: Health status with backend URL and availability
@@ -152,13 +182,13 @@ def check_backend_health() -> dict:
         return {
             "status": "healthy",
             "backend_url": BACKEND_URL,
-            "message": "EMIS backend is running and accessible"
+            "message": "Quid backend is running and accessible"
         }
     except requests.exceptions.ConnectionError:
         return {
             "status": "unavailable",
             "backend_url": BACKEND_URL,
-            "message": f"EMIS backend is not accessible at {BACKEND_URL}. Please start the backend service."
+            "message": f"Quid backend is not accessible at {BACKEND_URL}. Please start the backend service."
         }
     except Exception as e:
         return {
@@ -186,7 +216,7 @@ if __name__ == "__main__":
     # This allows Claude Desktop to communicate with the server
     import asyncio
     
-    logger.info(f"Starting EMIS MCP Server")
+    logger.info(f"Starting Quid MCP Server")
     logger.info(f"Backend URL: {BACKEND_URL}")
     logger.info(f"API Key configured: {API_KEY is not None}")
     

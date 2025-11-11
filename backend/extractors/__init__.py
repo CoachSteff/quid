@@ -4,6 +4,8 @@ from .base import BaseExtractor, ExtractionException
 from .registry import ExtractorRegistry, get_registry, register_extractor
 from .table import TableExtractor
 from .content import ContentExtractor
+from .raw import RawExtractor
+from .documents import DocumentLinksExtractor
 
 __all__ = [
     'BaseExtractor',
@@ -12,5 +14,7 @@ __all__ = [
     'get_registry',
     'register_extractor',
     'TableExtractor',
-    'ContentExtractor'
+    'ContentExtractor',
+    'RawExtractor',
+    'DocumentLinksExtractor'
 ]

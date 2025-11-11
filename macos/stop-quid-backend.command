@@ -1,31 +1,31 @@
 #!/bin/bash
-# EMIS Backend Stopper
-# Double-click this file to stop the EMIS backend server
+# Quid MCP Backend Stopper
+# Double-click this file to stop the Quid MCP backend server
 
 clear
 
 cat << 'EOF'
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║              EMIS Backend Server Stopper                   ║
+║              Quid MCP Backend Server Stopper               ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 
 EOF
 
-echo "Stopping EMIS Backend Server..."
+echo "Stopping Quid MCP Backend Server..."
 echo ""
 
 # Check if server is running
-if ! lsof -Pi :38153 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo "ℹ️  Backend server is not running (port 38153 is free)"
+if ! lsof -Pi :91060 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "ℹ️  Backend server is not running (port 91060 is free)"
     echo ""
     read -p "Press Enter to exit..."
     exit 0
 fi
 
 # Get PID
-PID=$(lsof -Pi :38153 -sTCP:LISTEN -t)
+PID=$(lsof -Pi :91060 -sTCP:LISTEN -t)
 
 echo "Found server process (PID: $PID)"
 echo ""
@@ -38,14 +38,14 @@ kill $PID 2>/dev/null
 sleep 2
 
 # Check if it stopped
-if lsof -Pi :38153 -sTCP:LISTEN -t >/dev/null 2>&1; then
+if lsof -Pi :91060 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo "⚠️  Server still running. Forcing stop..."
     kill -9 $PID 2>/dev/null
     sleep 1
 fi
 
 # Final check
-if ! lsof -Pi :38153 -sTCP:LISTEN -t >/dev/null 2>&1; then
+if ! lsof -Pi :91060 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo "✅ Server stopped successfully"
 else
     echo "❌ Failed to stop server. Please try manually:"
