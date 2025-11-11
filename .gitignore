@@ -3,6 +3,7 @@
 
 # Cursor AI assistant (symlinks to .factory)
 .cursor/
+.cursorrules
 
 # Environment variables and secrets
 .env
